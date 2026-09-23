@@ -43,6 +43,36 @@ To rebuild after editing an engagement file by hand:
 python3 build/build.py engagements/<client>.json ~/Downloads/ATP-<Client>.docx
 ```
 
+## Reviewing template changes
+
+The repository is the history. `template/atp-website.docx` is the reviewed legal
+spine, so every change to it should be a commit someone can read.
+
+Run once per clone:
+
+```
+./build/setup-git.sh
+```
+
+That routes `.docx` through `build/docxtext.py`, so `git diff` and `git log -p`
+show the clause wording that changed instead of *"binary files differ"*:
+
+```
+-4.1 Invoices are payable within {{terms.payment_days}} days of the invoice date.
++4.1 Invoices are due within {{terms.payment_days}} days of the invoice date.
+```
+
+Two things worth knowing about this repo:
+
+- **The template carries no embedded fonts.** Twelve unsubsetted font files left
+  over from authoring were removed - the document had moved to Aptos and none was
+  in use. Template 4.56 MB to 42 KB, and every generated contract with it. If a
+  clause ever needs a font the reader may not have, send the PDF rather than
+  re-embedding.
+- **`.gitignore` anchors `/ATP-*.docx` to the root on purpose.** macOS sets
+  `core.ignorecase`, so an unanchored `ATP-*.docx` also matches
+  `template/atp-website.docx` and silently leaves the contract out of the repo.
+
 ## Architecture
 
 | Layer | Where | Changes per deal? |
