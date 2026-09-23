@@ -1,0 +1,16 @@
+[
+ ["Kick-off meeting and requirements capture","{{provider.short_name}} / {{client.short_name}}","Week 1"],
+ ["Content, photos and brand files provided","{{client.short_name}}","Week 1"],
+ ["First design draft, for review","{{provider.short_name}}","Week 2"],
+ ["Design feedback","{{client.short_name}}","Week 2"],
+ ["Design freeze – you approve the look","{{client.short_name}}","Week 3"],
+ ["Development commences","{{provider.short_name}}","Week 4"],
+ ["Page build","{{provider.short_name}}","Weeks 3–5"],
+ ["Approved wording supplied","{{client.short_name}}","Weeks 5–6"],
+ ["Working Demo 1","{{provider.short_name}}","Week 6"],
+ ["Approved wording added to the pages","{{provider.short_name}}","Week 6"],
+ ["Search set-up and checks on all screens","{{provider.short_name}}","Week 6"],
+ ["Two rounds of feedback, then sign-off","{{client.short_name}}","Week 7"],
+ ["Final details confirmed, then the site goes live","{{provider.short_name}}","Week 8"],
+ ["Handover session and administrator access","{{provider.short_name}}","Week 8"]
+]

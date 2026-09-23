@@ -1,0 +1,17 @@
+# Working snapshots taken before each template edit. Git is the history now;
+# these stay on disk as a belt-and-braces backup but do not belong in the repo
+# (each is ~4.6 MB and they are superseded by every commit).
+template/*.pre-*.docx
+template/*.bak.docx
+presets.pre-*/
+README.pre-*.md
+build/*.pre-*.py
+
+# Generated contracts go to ~/Downloads, never in here. Guard anyway.
+# Leading slash matters: macOS sets core.ignorecase, so an unanchored ATP-*.docx
+# also matches template/atp-website.docx and silently excludes the template.
+/ATP-*.docx
+
+__pycache__/
+*.pyc
+.DS_Store

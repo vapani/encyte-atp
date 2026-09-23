@@ -1,0 +1,14 @@
+[
+ {
+  "percent": 30,
+  "description": "30% at kick-off (Week 1), due on signing this agreement."
+ },
+ {
+  "percent": 40,
+  "description": "40% on completion of development."
+ },
+ {
+  "percent": 30,
+  "description": "30% on acceptance."
+ }
+]

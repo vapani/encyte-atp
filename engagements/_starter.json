@@ -1,0 +1,48 @@
+{
+ "jurisdiction": "AU",
+ "engagement_type": "website",
+ "atp": {
+  "date": "[dd Month yyyy]",
+  "ref": "[26-XXX-WD-000]"
+ },
+ "proposal": {
+  "ref": "26-XXX-WD-000",
+  "date": "[dd Month yyyy]"
+ },
+ "client": {
+  "legal_name": "[Client legal entity name]",
+  "abn": "[00 000 000 000]",
+  "address": "[Street, Suburb STATE 0000]",
+  "short_name": "[Trading name]",
+  "contact_name": "[Contact person]",
+  "domain": "[domain.com.au]"
+ },
+ "scope": {
+  "inclusions": "preset:inclusions.website",
+  "pages": "preset:pages.website-starter"
+ },
+ "hosting": {
+  "note": ""
+ },
+ "fee": {
+  "standard": 0,
+  "discount": 0
+ },
+ "milestones": "preset:milestones.20-40-40",
+ "timeline": {
+  "duration": "[N] weeks",
+  "tasks": "preset:workplan.website-8week"
+ },
+ "support": {
+  "included": {
+   "value": 60,
+   "unit": "days"
+  },
+  "plan": {
+   "price": 99
+  }
+ },
+ "project": {
+  "name": "[Project name, e.g. Acme website revamp]"
+ }
+}

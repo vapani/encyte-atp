@@ -1,0 +1,27 @@
+{
+  "code": "AU",
+  "provider": {
+    "legal_name": "Encyte Pty Ltd",
+    "abn_label": "ABN",
+    "abn": "62 633 260 474",
+    "address": "175 Maroondah Hwy, Ringwood VIC 3134, Australia",
+    "short_name": "Encyte",
+    "signatory_name": "Asitha Vajirapani",
+    "signatory_position": "Managing Director",
+    "signatory_email": "asitha@encyte.com.au",
+    "phone": "0483 852 933"
+  },
+  "currency_symbol": "$",
+  "tax": {
+    "name": "GST",
+    "rate": 0.1
+  },
+  "governing_law": "Victoria, Australia",
+  "dispute_body": "Resolution Institute",
+  "interest_benchmark": "Reserve Bank of Australia cash rate plus 4% a year",
+  "support_hours": "9:00am to 5:00pm Australian Eastern Time, Monday to Friday, excluding public holidays in Victoria",
+  "consumer_law": "Australian Consumer Law",
+  "privacy_act": "Privacy Act 1988 (Cth)",
+  "copyright_act": "Copyright Act 1968 (Cth)",
+  "moral_rights_part": "Part IX"
+}

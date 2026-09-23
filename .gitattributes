@@ -1,0 +1,3 @@
+# Diff the contract as readable text instead of "binary files differ".
+# Enable once per clone:  ./build/setup-git.sh
+*.docx diff=docx
