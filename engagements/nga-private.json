@@ -1,92 +1,92 @@
 {
-  "jurisdiction": "AU",
-  "engagement_type": "website",
-  "atp": {
-    "date": "22 September 2026",
-    "ref": "26-NGA-WD-062"
+ "jurisdiction": "AU",
+ "engagement_type": "website",
+ "atp": {
+  "date": "23 September 2026",
+  "ref": "26-NGA-WD-062"
+ },
+ "proposal": {
+  "date": "8 September 2026"
+ },
+ "client": {
+  "legal_name": "NGA Private Pty Ltd as trustee for the NGA Private Trust",
+  "abn": "94 340 745 663",
+  "address": "1/1 International Court, Scoresby VIC 3179",
+  "short_name": "NGA Private",
+  "contact_name": "Bhavini Billimoria",
+  "domain": "ngaprivate.com.au"
+ },
+ "scope": {
+  "inclusions": "preset:inclusions.website",
+  "pages": [
+   [
+    "Home",
+    "A clear starting point for each of the three audiences"
+   ],
+   [
+    "Expertise",
+    "What NGA Private does, and for whom"
+   ],
+   [
+    "Service pages (six)",
+    "One page for each area of advice, built from a single template"
+   ],
+   [
+    "Industry pages (three)",
+    "Property development and construction, entertainment, and private clients and family offices"
+   ],
+   [
+    "How we work",
+    "The process, and what an engagement costs before committing"
+   ],
+   [
+    "About",
+    "Who does the work, the practice’s history, and its credentials and registrations"
+   ],
+   [
+    "Case studies",
+    "Index of worked examples and proof of relevant experience"
+   ],
+   [
+    "Case study pages (three)",
+    "The detail behind each example, built from a single template"
+   ],
+   [
+    "Insights",
+    "Article index, using the reusable article template"
+   ],
+   [
+    "Contact",
+    "Enquiry form, phone and email"
+   ],
+   [
+    "Legal",
+    "Privacy, terms and disclaimer wording supplied by NGA Private"
+   ]
+  ]
+ },
+ "hosting": {
+  "note": "Indicatively about USD $14 a month, currently around AUD $20."
+ },
+ "fee": {
+  "standard": 5500,
+  "discount": 650
+ },
+ "milestones": "preset:milestones.20-40-40",
+ "timeline": {
+  "duration": "Eight weeks",
+  "tasks": "preset:workplan.website-8week"
+ },
+ "support": {
+  "included": {
+   "value": 60,
+   "unit": "days"
   },
-  "proposal": {
-    "date": "8 September 2026"
-  },
-  "client": {
-    "legal_name": "NGA Private Pty Ltd as trustee for the NGA Private Trust",
-    "abn": "94 340 745 663",
-    "address": "1/1 International Court, Scoresby VIC 3179",
-    "short_name": "NGA Private",
-    "contact_name": "Bhavini Billimoria",
-    "domain": "ngaprivate.com.au"
-  },
-  "scope": {
-    "inclusions": "preset:inclusions.website",
-    "pages": [
-      [
-        "Home",
-        "A clear starting point for each of the three audiences"
-      ],
-      [
-        "Expertise",
-        "What NGA Private does, and for whom"
-      ],
-      [
-        "Service pages (six)",
-        "One page for each area of advice, built from a single template"
-      ],
-      [
-        "Industry pages (three)",
-        "Property development and construction, entertainment, and private clients and family offices"
-      ],
-      [
-        "How we work",
-        "The process, and what an engagement costs before committing"
-      ],
-      [
-        "About",
-        "Who does the work, the practice’s history, and its credentials and registrations"
-      ],
-      [
-        "Case studies",
-        "Index of worked examples and proof of relevant experience"
-      ],
-      [
-        "Case study pages (three)",
-        "The detail behind each example, built from a single template"
-      ],
-      [
-        "Insights",
-        "Article index, using the reusable article template"
-      ],
-      [
-        "Contact",
-        "Enquiry form, phone and email"
-      ],
-      [
-        "Legal",
-        "Privacy, terms and disclaimer wording supplied by NGA Private"
-      ]
-    ]
-  },
-  "hosting": {
-    "note": "Indicatively about USD $14 a month, currently around AUD $20."
-  },
-  "fee": {
-    "standard": 5500,
-    "discount": 650
-  },
-  "milestones": "preset:milestones.20-40-40",
-  "timeline": {
-    "duration": "Eight weeks",
-    "tasks": "preset:workplan.website-8week"
-  },
-  "support": {
-    "included": {
-      "value": 60,
-      "unit": "days"
-    },
-    "plan": {
-      "price": 99
-    }
-  },
-  "project": {
-    "name": "NGA Private website"
+  "plan": {
+   "price": 99
   }
+ },
+ "project": {
+  "name": "NGA Private website"
+ }
 }
