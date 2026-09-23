@@ -11,6 +11,29 @@ python3 build/build.py engagements/<client>.json ~/Downloads/ATP-<Client>.docx
 **Start here. You do not need to edit JSON, and you must not open the template.**
 
 ```
+python3 build/serve.py
+```
+
+That opens a form in your browser at `http://127.0.0.1:8420`. Fill it in, click
+**Build the ATP**, and the `.docx` downloads. The server listens on localhost
+only - nothing is reachable from outside the machine and no client data leaves it.
+Ctrl-C in the terminal stops it.
+
+**Starting from a proposal.** Drop a `.docx` or `.pdf` onto the top of the form and
+it fills in what it can find. It matches patterns - an ABN is eleven digits, a
+reference looks like `26-NGA-WD-062`, the price is the largest dollar figure - so
+it is confidently wrong sometimes. Anything it guessed is **shaded**, and the notes
+above the form say what to check. Read every shaded field before building.
+
+**Pages are editable rows**, not a preset, because every project differs. They appear
+in the contract exactly as typed.
+
+A build that fails validation leaves nothing behind. A build that succeeds writes
+`engagements/<client>.json`, which is the record of that deal - commit it.
+
+There is also a terminal version if you prefer it:
+
+```
 python3 build/new.py
 ```
 
