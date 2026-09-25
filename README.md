@@ -141,6 +141,8 @@ Acentura ATP — 30/40/30 in clause 2.3 and 40/20/20 in clause 4.0, because it w
 - required fields present and non-empty
 - `scope.pages` non-empty
 - **no unreplaced `{{tokens}}` in the output**, including in headers and footers
+- **no em dashes** anywhere in the output. House style is the spaced en dash, and Word's
+  autocorrect turns ` - ` into an em dash the moment anyone edits the template by hand
 - `engagement_type` has a template
 - the work plan cannot run past the stated duration (a "six weeks" timeline against the
   eight-week plan builds a contract that contradicts its own schedule)

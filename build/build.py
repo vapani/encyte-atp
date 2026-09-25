@@ -276,12 +276,23 @@ def build(engagement_file, out_file):
         for part in (s_.header, s_.first_page_header, s_.footer, s_.first_page_footer):
             blob += "\n" + "\n".join(p.text for p in part.paragraphs)
     for m in re.findall(r"\{\{[^}]+\}\}", blob): leftover.add(m)
+
+    # House style is the spaced en dash. Word's autocorrect turns " - " into an em
+    # dash the moment anyone edits the template by hand, so catch it at the output,
+    # which covers engagement data as well as the template.
+    em = [ln.strip() for ln in blob.split("\n") if "\u2014" in ln]
+
     print(f"built -> {out_file}")
     print(f"  pages {len(eng['scope']['pages'])} · milestones {len(d['_milestone_rows'])} · tasks {len(eng['timeline']['tasks'])}")
     print(f"  type {eng.get('engagement_type')} · deliverable '{d['deliverable']}' · blocks kept {kept}, cut {cut}")
     print(f"  total {d['fee.total']} ex / {d['fee.total_inc']} inc {jur['tax']['name']}")
     print("  UNREPLACED TOKENS:", sorted(leftover) if leftover else "none")
-    return not leftover
+    if em:
+        print(f"  EM DASHES: {len(em)} \u2014 house style is the spaced en dash \u2013")
+        for ln in em[:6]:
+            i = ln.index("\u2014")
+            print(f"    ...{ln[max(0, i-56):i+54]}...")
+    return not leftover and not em
 
 if __name__ == "__main__":
     ok = build(sys.argv[1], sys.argv[2])
