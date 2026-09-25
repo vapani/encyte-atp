@@ -1,0 +1,41 @@
+{
+  // Cloudflare Worker that fronts the ATP form container.
+  // Deploy with:  npx wrangler deploy      (Docker must be running)
+  "name": "encyte-atp",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-09-01",
+
+  "containers": [
+    {
+      // Three people share one instance; there is no per-user state to keep
+      // apart, because engagement records go to GitHub rather than to disk.
+      "max_instances": 1,
+      "class_name": "AtpContainer",
+      "image": "./Dockerfile"
+    }
+  ],
+
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ATP_CONTAINER",
+        "class_name": "AtpContainer"
+      }
+    ]
+  },
+
+  "migrations": [
+    {
+      "tag": "v1",
+      // Containers require new_sqlite_classes, not new_classes.
+      "new_sqlite_classes": ["AtpContainer"]
+    }
+  ],
+
+  "observability": {
+    "enabled": true
+  }
+
+  // ATP_GITHUB_TOKEN is NOT set here. It is a secret:
+  //   npx wrangler secret put ATP_GITHUB_TOKEN
+}

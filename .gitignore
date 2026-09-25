@@ -15,3 +15,7 @@ build/*.pre-*.py
 __pycache__/
 *.pyc
 .DS_Store
+
+# Cloudflare / node
+node_modules/
+.wrangler/

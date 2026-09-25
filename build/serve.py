@@ -39,6 +39,72 @@ def slugify(s):
     return re.sub(r"[^a-z0-9]+", "-", (s or "client").lower()).strip("-") or "client"
 
 
+def record_engagement(eng, slug):
+    """Keep the engagement file as the record of what was issued.
+
+    Locally that means writing into engagements/ for you to commit. Hosted, the
+    container filesystem does not survive a restart, so with ATP_GITHUB_TOKEN set
+    it commits to the repository instead - the same audit trail, next to the
+    template version that produced the document.
+
+    Returns (ok, message). Never raises: a contract that has been generated
+    should still reach the person who asked for it, but they must be told the
+    record did not save.
+    """
+    blob = json.dumps(eng, indent=1, ensure_ascii=False) + "\n"
+    token = os.environ.get("ATP_GITHUB_TOKEN")
+
+    if not token:
+        try:
+            path = os.path.join(os.environ.get("ATP_ENGAGEMENTS", f"{ROOT}/engagements"),
+                                f"{slug}.json")
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            open(path, "w").write(blob)
+            return True, f"written to engagements/{slug}.json - commit it"
+        except OSError as e:
+            return False, f"could not write the engagement record: {e}"
+
+    import base64, urllib.request, urllib.error
+    repo = os.environ.get("ATP_GITHUB_REPO", "vapani/encyte-atp")
+    branch = os.environ.get("ATP_GITHUB_BRANCH", "main")
+    path = f"engagements/{slug}.json"
+    api = f"https://api.github.com/repos/{repo}/contents/{path}"
+    headers = {"Authorization": f"Bearer {token}",
+               "Accept": "application/vnd.github+json",
+               "X-GitHub-Api-Version": "2022-11-28",
+               "User-Agent": "encyte-atp"}
+
+    def call(req):
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return json.loads(r.read() or b"{}")
+
+    try:
+        sha = None                                   # updating needs the current sha
+        try:
+            sha = call(urllib.request.Request(f"{api}?ref={branch}", headers=headers)).get("sha")
+        except urllib.error.HTTPError as e:
+            if e.code != 404:
+                raise
+        payload = {"message": f"Record the {eng['client']['short_name']} engagement "
+                              f"({eng['atp']['ref']})",
+                   "content": base64.b64encode(blob.encode()).decode(),
+                   "branch": branch}
+        if sha:
+            payload["sha"] = sha
+        call(urllib.request.Request(api, data=json.dumps(payload).encode(),
+                                    headers={**headers, "Content-Type": "application/json"},
+                                    method="PUT"))
+        return True, f"committed to {repo} as {path}"
+    except Exception as e:
+        detail = ""
+        if isinstance(e, urllib.error.HTTPError):
+            try:
+                detail = " - " + json.loads(e.read()).get("message", "")
+            except Exception:
+                pass
+        return False, f"NOT recorded: {type(e).__name__}{detail}"
+
+
 def parse_upload(body, content_type):
     """First file part of a multipart body -> (filename, bytes).
 
@@ -250,6 +316,12 @@ $('go').onclick = async () => {
   a.href = URL.createObjectURL(blob); a.download = name; a.click();
   $('status').innerHTML = '<span class="ok">Built ' + name
     + ' — downloaded. Open it and read it before sending.</span>';
+  const rec = r.headers.get('X-Record') || '';
+  const bad = rec.startsWith('FAILED');
+  if (rec) $('status').innerHTML += '<div class="' + (bad ? 'note' : '') + '"'
+    + ' style="margin-top:8px;font-size:13px' + (bad ? '' : ';color:var(--mut)') + '">'
+    + (bad ? '<strong>The engagement record did not save.</strong> ' : 'Record: ')
+    + rec.replace(/^(ok|FAILED) /, '') + '</div>';
 };
 </script></body></html>"""
 
@@ -371,23 +443,16 @@ class Handler(BaseHTTPRequestHandler):
         finally:
             sys.stdout = real
 
-        # It built, so the engagement is worth keeping and committing. In a
-        # container this directory is ephemeral - see ATP_ENGAGEMENTS in the
-        # README for where the record actually belongs when hosted.
-        try:
-            kept = os.path.join(os.environ.get("ATP_ENGAGEMENTS", f"{ROOT}/engagements"),
-                                f"{slug}.json")
-            os.makedirs(os.path.dirname(kept), exist_ok=True)
-            json.dump(eng, open(kept, "w"), indent=1, ensure_ascii=False)
-            open(kept, "a").write("\n")
-        except OSError as e:
-            print(f"  could not write the engagement record: {e}")
+        # It built, so record what was issued.
+        recorded, record_msg = record_engagement(eng, slug)
+        print(f"  record: {record_msg}")
 
         data = open(out, "rb").read()
         os.unlink(out)
         self._send(200, data,
                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                    {"X-Filename": os.path.basename(out),
+                    "X-Record": ("ok " if recorded else "FAILED ") + record_msg,
                     "Content-Disposition": f'attachment; filename="{os.path.basename(out)}"'})
 
 

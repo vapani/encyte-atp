@@ -1,0 +1,16 @@
+{
+  "name": "encyte-atp",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Cloudflare Worker fronting the ATP form container",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "^0.0.35"
+  },
+  "devDependencies": {
+    "wrangler": "^4.42.0"
+  }
+}
