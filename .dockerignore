@@ -1,0 +1,5 @@
+.git
+__pycache__
+*.pyc
+template/*.pre-*.docx
+template/*.bak.docx

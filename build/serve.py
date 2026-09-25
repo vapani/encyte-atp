@@ -371,10 +371,17 @@ class Handler(BaseHTTPRequestHandler):
         finally:
             sys.stdout = real
 
-        # it built, so the engagement is worth keeping and committing
-        kept = f"{ROOT}/engagements/{slug}.json"
-        json.dump(eng, open(kept, "w"), indent=1, ensure_ascii=False)
-        open(kept, "a").write("\n")
+        # It built, so the engagement is worth keeping and committing. In a
+        # container this directory is ephemeral - see ATP_ENGAGEMENTS in the
+        # README for where the record actually belongs when hosted.
+        try:
+            kept = os.path.join(os.environ.get("ATP_ENGAGEMENTS", f"{ROOT}/engagements"),
+                                f"{slug}.json")
+            os.makedirs(os.path.dirname(kept), exist_ok=True)
+            json.dump(eng, open(kept, "w"), indent=1, ensure_ascii=False)
+            open(kept, "a").write("\n")
+        except OSError as e:
+            print(f"  could not write the engagement record: {e}")
 
         data = open(out, "rb").read()
         os.unlink(out)
@@ -385,20 +392,34 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    port, srv = PORT, None
-    for port in range(PORT, PORT + 12):
-        try:
-            srv = ThreadingHTTPServer(("127.0.0.1", port), Handler)
-            break
-        except OSError:
-            continue
-    if srv is None:
-        sys.exit(f"could not bind a port in {PORT}-{PORT + 11}")
-    url = f"http://127.0.0.1:{port}"
+    # Defaults are the local ones. In a container ATP_HOST=0.0.0.0 binds the
+    # published port, and nothing opens a browser.
+    host = os.environ.get("ATP_HOST", "127.0.0.1")
+    fixed = os.environ.get("ATP_PORT")
+    open_browser = os.environ.get("ATP_OPEN_BROWSER", "1") != "0"
+
+    if fixed:                       # a container publishes one known port
+        srv, port = ThreadingHTTPServer((host, int(fixed)), Handler), int(fixed)
+    else:                           # locally, step past a port already in use
+        srv, port = None, PORT
+        for port in range(PORT, PORT + 12):
+            try:
+                srv = ThreadingHTTPServer((host, port), Handler)
+                break
+            except OSError:
+                continue
+        if srv is None:
+            sys.exit(f"could not bind a port in {PORT}-{PORT + 11}")
+
+    url = f"http://{'127.0.0.1' if host in ('0.0.0.0', '') else host}:{port}"
     print(f"\n  ATP form running at {url}")
-    print("  Local only - nothing is reachable from outside this machine.")
+    if host in ("127.0.0.1", "localhost"):
+        print("  Local only - nothing is reachable from outside this machine.")
+    else:
+        print(f"  Listening on {host}:{port} - put authentication in front of it.")
     print("  Press Ctrl-C to stop.\n")
-    threading.Timer(0.6, lambda: webbrowser.open(url)).start()
+    if open_browser:
+        threading.Timer(0.6, lambda: webbrowser.open(url)).start()
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
