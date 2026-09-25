@@ -109,6 +109,9 @@ def derive(eng, jur):
       "fee.standard": money(std), "fee.discount": money(disc),
       "fee.total": money(total), "fee.tax": money(tax), "fee.total_inc": money(total+tax),
     }
+    # "a website" but "an app" - the article has to follow the noun
+    d["deliverable.article"] = "an" if d["deliverable"][:1].lower() in "aeiou" else "a"
+
     tx, cl = jur["tax"]["name"], eng["client"]["short_name"]
     d["fee.headline"] = (
         f'The standard build price for this scope is {money(std)} excluding {tx}. '
