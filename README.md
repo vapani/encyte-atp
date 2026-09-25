@@ -215,7 +215,7 @@ argument that the cap is unreasonable.
 
 Limits belong in the **jurisdiction pack** (`insurance.pi`, `insurance.public_liability`,
 `insurance.cyber`), not the engagement file — they are a property of the insuring entity.
-Per-deal fields do not grow — they stand at 24 in `_starter.json`. `scope.platform`, `scope.exclusions`, `terms.payment_days` and `hosting.note` fall back to `DEFAULTS` if omitted.
+Per-deal fields do not grow — they stand at 23 in `_starter.json`. `scope.platform`, `scope.exclusions`, `terms.payment_days` and `hosting.note` fall back to `DEFAULTS` if omitted.
 
 Three things to confirm with the broker first: whether PI is claims-made and what the
 **retroactive date** is; whether limits are **any one claim** or **aggregate**; and whether the

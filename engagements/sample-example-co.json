@@ -1,89 +1,88 @@
 {
-  "jurisdiction": "AU",
-  "engagement_type": "website",
-  "atp": {
-    "date": "23 September 2026",
-    "ref": "26-EXC-WD-071"
+ "jurisdiction": "AU",
+ "engagement_type": "website",
+ "atp": {
+  "date": "23 September 2026",
+  "ref": "26-EXC-WD-071"
+ },
+ "proposal": {
+  "ref": "26-EXC-WD-070",
+  "date": "15 September 2026"
+ },
+ "client": {
+  "legal_name": "Example Co Pty Ltd",
+  "abn": "00 000 000 000",
+  "address": "10 Sample Street, Richmond VIC 3121",
+  "short_name": "Example Co",
+  "contact_name": "Sample Contact"
+ },
+ "scope": {
+  "platform": "Webflow",
+  "inclusions": "preset:inclusions.website",
+  "pages": "preset:pages.website-starter",
+  "exclusions": "copywriting, photography, legal review, and ongoing SEO"
+ },
+ "hosting": {
+  "note": ""
+ },
+ "fee": {
+  "standard": 7200,
+  "discount": 0
+ },
+ "milestones": "preset:milestones.50-50",
+ "timeline": {
+  "duration": "Five weeks",
+  "tasks": [
+   [
+    "Kick-off and requirements",
+    "{{provider.short_name}} / {{client.short_name}}",
+    "Week 1"
+   ],
+   [
+    "Brand files and content provided",
+    "{{client.short_name}}",
+    "Week 1"
+   ],
+   [
+    "Design draft and review",
+    "{{provider.short_name}}",
+    "Week 2"
+   ],
+   [
+    "Design freeze",
+    "{{client.short_name}}",
+    "Week 3"
+   ],
+   [
+    "Build and content population",
+    "{{provider.short_name}}",
+    "Weeks 3–4"
+   ],
+   [
+    "Feedback and sign-off",
+    "{{client.short_name}}",
+    "Week 5"
+   ],
+   [
+    "Go live and handover",
+    "{{provider.short_name}}",
+    "Week 5"
+   ]
+  ]
+ },
+ "support": {
+  "included": {
+   "value": 3,
+   "unit": "months"
   },
-  "proposal": {
-    "ref": "26-EXC-WD-070",
-    "date": "15 September 2026"
-  },
-  "client": {
-    "legal_name": "Example Co Pty Ltd",
-    "abn": "00 000 000 000",
-    "address": "10 Sample Street, Richmond VIC 3121",
-    "short_name": "Example Co",
-    "contact_name": "Sample Contact",
-    "domain": "exampleco.com.au"
-  },
-  "scope": {
-    "platform": "Webflow",
-    "inclusions": "preset:inclusions.website",
-    "pages": "preset:pages.website-starter",
-    "exclusions": "copywriting, photography, legal review, and ongoing SEO"
-  },
-  "hosting": {
-    "note": ""
-  },
-  "fee": {
-    "standard": 7200,
-    "discount": 0
-  },
-  "milestones": "preset:milestones.50-50",
-  "timeline": {
-    "duration": "Five weeks",
-    "tasks": [
-      [
-        "Kick-off and requirements",
-        "{{provider.short_name}} / {{client.short_name}}",
-        "Week 1"
-      ],
-      [
-        "Brand files and content provided",
-        "{{client.short_name}}",
-        "Week 1"
-      ],
-      [
-        "Design draft and review",
-        "{{provider.short_name}}",
-        "Week 2"
-      ],
-      [
-        "Design freeze",
-        "{{client.short_name}}",
-        "Week 3"
-      ],
-      [
-        "Build and content population",
-        "{{provider.short_name}}",
-        "Weeks 3–4"
-      ],
-      [
-        "Feedback and sign-off",
-        "{{client.short_name}}",
-        "Week 5"
-      ],
-      [
-        "Go live and handover",
-        "{{provider.short_name}}",
-        "Week 5"
-      ]
-    ]
-  },
-  "support": {
-    "included": {
-      "value": 3,
-      "unit": "months"
-    },
-    "plan": {
-      "price": 149
-    }
-  },
-  "terms": {
-    "payment_days": 30
-  },
-  "project": {
-    "name": "Example Co website"
+  "plan": {
+   "price": 149
   }
+ },
+ "terms": {
+  "payment_days": 30
+ },
+ "project": {
+  "name": "Example Co website"
+ }
 }

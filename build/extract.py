@@ -85,11 +85,6 @@ def extract(path):
         if len(cands) > 1:
             notes.append(f"possible client names: {', '.join(cands[:4])}")
 
-    # --- domain
-    doms = re.findall(r"\b((?:[a-z0-9-]+\.)+(?:com\.au|net\.au|org\.au|com|io|co))\b", flat.lower())
-    doms = [d for d in doms if not d.endswith(("encyte.com.au",)) and "@" not in d]
-    if doms:
-        out["client.domain"] = (_hi if len(set(doms)) == 1 else _lo)(doms[0])
 
     # --- money: the largest figure is usually the project price
     amounts = []

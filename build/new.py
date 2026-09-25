@@ -111,7 +111,6 @@ def main():
     abn = ask("Client ABN", check=v_abn)
     address = ask("Client address", hint="Street, Suburb STATE 0000")
     contact = ask("Contact person")
-    domain = ask("Domain", hint="the client's website domain, e.g. acme.com.au")
 
     head("References")
     today = datetime.date.today().strftime("%-d %B %Y")
@@ -159,7 +158,7 @@ def main():
         "atp": {"date": atp_date, "ref": atp_ref},
         "proposal": {"ref": prop_ref, "date": prop_date},
         "client": {"legal_name": legal_name, "abn": abn, "address": address,
-                   "short_name": short_name, "contact_name": contact, "domain": domain},
+                   "short_name": short_name, "contact_name": contact},
         "scope": {"inclusions": f"preset:{inclusions}", "pages": f"preset:{pages}",
                   "platform": platform},
         # scope.exclusions omitted below unless given, so DEFAULTS supplies the standard list

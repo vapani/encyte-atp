@@ -123,7 +123,6 @@ td.act{width:36px}
   <div class="field"><label>ABN</label><input id="client.abn" placeholder="51 824 753 556"><div class="badge">check this</div></div>
   <div class="field full"><label>Address</label><input id="client.address" placeholder="12 Example St, Richmond VIC 3121"><div class="badge">check this</div></div>
   <div class="field"><label>Contact person</label><input id="client.contact_name" placeholder="Jane Doe"><div class="badge">check this</div></div>
-  <div class="field"><label>Domain</label><input id="client.domain" placeholder="acme.com.au"><div class="badge">check this</div></div>
 </div></div>
 
 <div class="card"><h2>References</h2><div class="grid">
@@ -228,7 +227,7 @@ async function send(f){
 // ---- build
 $('go').onclick = async () => {
   const ids = ['client.legal_name','client.short_name','client.abn','client.address',
-    'client.contact_name','client.domain','atp.ref','atp.date','proposal.ref','proposal.date',
+    'client.contact_name','atp.ref','atp.date','proposal.ref','proposal.date',
     'project.name','scope.inclusions','scope.platform','scope.exclusions','hosting.note',
     'fee.standard','fee.discount','milestones','workplan','timeline.duration',
     'support.value','support.unit','support.price'];
@@ -329,7 +328,7 @@ class Handler(BaseHTTPRequestHandler):
                 "atp": {"date": d.get("atp.date", ""), "ref": d.get("atp.ref", "")},
                 "proposal": {"ref": d.get("proposal.ref", ""), "date": d.get("proposal.date", "")},
                 "client": {k: d.get(f"client.{k}", "") for k in
-                           ("legal_name", "abn", "address", "short_name", "contact_name", "domain")},
+                           ("legal_name", "abn", "address", "short_name", "contact_name")},
                 "scope": {"inclusions": f'preset:{d.get("scope.inclusions")}',
                           "pages": d.get("pages") or [],
                           "platform": d.get("scope.platform") or "WordPress"},

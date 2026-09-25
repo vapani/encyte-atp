@@ -14,8 +14,7 @@
   "abn": "[00 000 000 000]",
   "address": "[Street, Suburb STATE 0000]",
   "short_name": "[Trading name]",
-  "contact_name": "[Contact person]",
-  "domain": "[domain.com.au]"
+  "contact_name": "[Contact person]"
  },
  "scope": {
   "inclusions": "preset:inclusions.website",
