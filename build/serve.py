@@ -163,6 +163,7 @@ input:focus,select:focus{outline:2px solid var(--teal);outline-offset:-1px;borde
 @media(max-width:620px){.grid{grid-template-columns:1fr}}
 .field{margin-bottom:0}
 .field.guess input,.field.guess select{background:var(--warnbg);border-color:#e8c88a}
+#pages tr.guess input{background:var(--warnbg);border-color:#e8c88a}
 .badge{display:none;font-size:11px;color:var(--warn);margin-top:4px;font-weight:500}
 .field.guess .badge{display:block}
 button{font:inherit;font-weight:500;border-radius:7px;border:1px solid var(--line);
@@ -292,6 +293,8 @@ async function send(f){
     if(k === 'scope.pages'){
       $('pages').querySelector('tbody').innerHTML = '';
       v.value.forEach(r => addPage(r[0], r[1]));
+      // read from the proposal, so shade them like any other guess
+      document.querySelectorAll('#pages tbody tr').forEach(tr => tr.classList.add('guess'));
       filled++; continue;
     }
     const el = $(k);

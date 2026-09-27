@@ -18,20 +18,26 @@ MONTHS = ("January February March April May June July August September "
 
 
 def read_text(path):
-    """Plain text of a .docx or .pdf. Raises with a readable message otherwise."""
+    """(full text, cover text) of a .docx or .pdf. Raises with a readable message otherwise.
+
+    The cover is the first page of a PDF, or the first 30 paragraphs of a .docx. It
+    matters for dates: the body of a proposal is full of dates that are not its own.
+    """
     ext = os.path.splitext(path)[1].lower()
     if ext == ".docx":
         from docx import Document
         d = Document(path)
-        parts = [p.text for p in d.paragraphs]
+        paras = [p.text for p in d.paragraphs]
+        parts = list(paras)
         for t in d.tables:
             for row in t.rows:
                 parts.append(" | ".join(c.text for c in row.cells))
-        return "\n".join(parts)
+        return "\n".join(parts), "\n".join(paras[:30])
     if ext == ".pdf":
         import fitz
         with fitz.open(path) as doc:
-            return "\n".join(p.get_text() for p in doc)
+            pages = [p.get_text() for p in doc]
+        return "\n".join(pages), (pages[0] if pages else "")
     raise ValueError(f"unsupported file type '{ext}' - upload a .docx or .pdf")
 
 
@@ -58,6 +64,75 @@ def _labelled(flat, *labels):
         if m:
             return _amount(m.group(1) or m.group(2))
     return None
+
+_COUNT_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7,
+                "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "fifteen": 15,
+                "twenty": 20}
+
+def _page_name(s):
+    """A plausible page name: short, capitalised, no figures, not a heading about pages."""
+    s = s.strip(" .;:")
+    return (0 < len(s) <= 40 and len(s.split()) <= 5 and s[:1].isupper()
+            and not re.search(r"[\d$|]|\bpages?\b", s, re.I))
+
+def _page_list(text):
+    """(page names, count the proposal states), from the three layouts Encyte uses:
+
+        8 pages - Home, Expertise, How we work, ...           (NGA)
+        Page scope - 9 pages / Home - Our Story - Contact / ...  (Smiles 4 Miles)
+        Up to 8 core pages ... A likely core set is Home, ...  (REKT)
+    """
+    count_re = r"\b(?:up to\s+)?(\d{1,2}|%s)\s+(?:core\s+|main\s+)?pages\b" % "|".join(_COUNT_WORDS)
+    # Every count in the document, scope counts first. Audit text quotes the
+    # current site's pages too ("five of the seven pages ... have no ...").
+    counts = []
+    for line in text.split("\n"):
+        for c in re.finditer(count_re, line, re.I):
+            w = c.group(1).lower()
+            n = int(w) if w.isdigit() else _COUNT_WORDS[w]
+            scope = bool(re.search(r"up to|core|main|page scope", line, re.I)) or not line[:c.start()].strip(" ·-")
+            counts.append((not scope, n))
+    counts = [n for _, n in sorted(counts, key=lambda t: t[0])]
+    stated = counts[0] if counts else None
+
+    candidates = []
+    lines = [l.strip() for l in text.split("\n")]
+    for i, line in enumerate(lines):
+        c = re.search(count_re, line, re.I)
+        if not c:
+            continue
+        tail = line[c.end():]
+        same = re.match(r"\s*[\u2013\u2014:\-]\s*(.+)$", tail)
+        if same:                                   # the list follows on the same line
+            body = same.group(1)
+            if i + 1 < len(lines) and lines[i + 1][:1].islower():   # wrapped: "In / practice"
+                body += " " + lines[i + 1]
+            items = re.split(r",\s*|\s+and\s+|\s*\u00b7\s*", body.strip(" ."))
+        else:                                      # the list runs down the following lines
+            items = []
+            for nxt in lines[i + 1:i + 8]:
+                parts = [p for p in re.split(r"\s*\u00b7\s*|,\s*", nxt) if p]
+                if not parts or not all(_page_name(p) for p in parts):
+                    break
+                items += parts
+        items = [re.sub(r"^and\s+", "", p).strip(" .") for p in items]
+        if items and all(_page_name(p) for p in items):
+            candidates.append(items)
+
+    flat = re.sub(r"\s+", " ", text)
+    for m in re.finditer(r"(?:core set is|pages are|pages include|sitemap (?:is|includes))\s+(.+?)\.", flat, re.I):
+        items = [re.sub(r"^and\s+", "", p).strip() for p in re.split(r",\s*|\s+and\s+", m.group(1))]
+        items = [p for p in items if p]
+        if items and all(_page_name(p) for p in items):
+            candidates.append(items)
+
+    for n in counts:                               # a list that matches a stated count wins,
+        for items in candidates:                   # scope counts tried first
+            if len(items) == n:
+                return items, n
+    best = max(candidates, key=len) if candidates else []
+    return best, stated
+
 
 def _prepared_for(text):
     """The client named on the cover by 'Prepared for', joined into one line.
@@ -98,7 +173,7 @@ def _prepared_for(text):
 
 
 def extract(path):
-    text = read_text(path)
+    text, cover = read_text(path)
     flat = re.sub(r"[ \t]+", " ", text)
     out, notes = {}, []
 
@@ -114,12 +189,21 @@ def extract(path):
         if len(set(refs)) > 1:
             notes.append(f"several references found ({', '.join(sorted(set(refs)))}) - first used")
 
-    # --- dates written as 8 September 2026
-    dates = re.findall(r"\b(\d{1,2} (?:%s) \d{4})\b" % "|".join(MONTHS), flat)
-    if dates:
-        out["proposal.date"] = (_hi if len(set(dates)) == 1 else _lo)(dates[0])
-        if len(set(dates)) > 1:
-            notes.append(f"{len(set(dates))} dates found - earliest-appearing used for the proposal date")
+    # --- the proposal date, written as 8 September 2026. Only the cover, or a date
+    # labelled 'dated', counts: the body quotes other dates - the Ciro's proposal
+    # cites a 19 June 2026 blog post on the client's current site.
+    month = "|".join(MONTHS)
+    full = r"\d{1,2} (?:%s) \d{4}" % month
+    on_cover = re.findall(rf"\b({full})\b", re.sub(r"[ \t]+", " ", cover))
+    labelled = re.search(rf"\bdated\s+({full})\b", flat)
+    if on_cover:
+        out["proposal.date"] = (_hi if len(set(on_cover)) == 1 else _lo)(on_cover[0])
+    elif labelled:
+        out["proposal.date"] = _lo(labelled.group(1))
+    else:
+        m = re.search(rf"\b((?:{month}) \d{{4}})\b", cover)
+        notes.append(f"the cover is dated only '{m.group(1)}' - enter the day the proposal was issued"
+                     if m else "no proposal date found - enter the date on the proposal")
 
     # --- ABNs, ignoring your own
     abns = re.findall(r"\b(\d{2}[ ]?\d{3}[ ]?\d{3}[ ]?\d{3})\b", flat)
@@ -131,10 +215,18 @@ def extract(path):
     # with the contact and their role first ("Rob, Founder, REKT Productions")
     prepared = _prepared_for(text)
     if prepared:
+        # 'Rob, Founder, REKT Productions' puts the client after a role;
+        # 'Ciro's Cakes & Biscuits, Noble Park' puts it first, then the suburb.
         parts = [p.strip() for p in prepared.split(",") if p.strip()]
-        out["client.short_name"] = _lo(parts[-1])
-        if len(parts) > 1 and re.match(r"^[A-Z][a-z]+(?: [A-Z][a-z]+){0,2}$", parts[0]):
-            out["client.contact_name"] = _lo(parts[0])
+        ROLE = (r"\b(?:founder|co-founder|director|owner|ceo|coo|cfo|cmo|chief|manager|head|"
+                r"principal|partner|president|chair|lead|coordinator|officer|executive)\b")
+        role_at = next((i for i, p in enumerate(parts) if i and re.search(ROLE, p, re.I)), None)
+        if role_at is not None and role_at + 1 < len(parts):
+            out["client.short_name"] = _lo(", ".join(parts[role_at + 1:]))
+            if re.match(r"^[A-Z][a-z]+(?: [A-Z][a-z]+){0,2}$", parts[0]):
+                out["client.contact_name"] = _lo(parts[0])
+        else:
+            out["client.short_name"] = _lo(parts[0])
 
     # --- client legal name: a company/trust that is not you. Always a guess: a
     # wrong legal name in a signed contract is worse than an empty field.
@@ -179,6 +271,13 @@ def extract(path):
             out["fee.standard"] = _lo(max(amounts))
             notes.append("price is the largest dollar figure in the document - check it is the "
                          "build price excluding GST, not a total including GST")
+    # An allowance inside the investment (plugins, licences) is an expense under
+    # clause 5.0, which the ATP charges at cost on top of the fee.
+    m = re.search(rf"([^\n]*allowance[^\n]*)\n?[^\n$\d]{{0,20}}?{MONEY}", flat, re.I)
+    if m and "fee.standard" in out:
+        notes.append(f"the investment includes '{m.group(1).strip()}' of {_amount(m.group(2)):,.0f} - "
+                     f"clause 5.0 charges plugins and licences at cost on top of the fee, so decide "
+                     f"whether the ATP fee should leave the allowance out")
 
     # --- duration
     m = re.search(r"\b(?:(\d{1,2})|(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve))"
@@ -200,20 +299,18 @@ def extract(path):
         if m:
             out["client.contact_name"] = _lo(m.group(1))
 
-    # --- pages. Guessing page rows from free text produced junk far more often
-    # than pages ("Stated twice", sentence fragments), and it replaced the
-    # standard list. Now a list like "8 pages - Home, About, Contact" is only
-    # reported, for you to add with a purpose each.
-    # A wrapped list continues on a line that starts in lower case ("In / practice");
-    # a capital means the next line is something else, such as the price.
-    m = re.search(r"\b(?:\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)"
-                  r"\s+pages?\s*[\u2013\u2014:-]\s*([^\n]+(?:(?-i:\n[a-z])[^\n]*)?)", text, re.I)
-    if m:
-        names = re.split(r",\s*|\s+and\s+", re.sub(r"\s+", " ", m.group(1)).strip(" ."))
-        names = [n for n in names if 1 < len(n) < 40 and not re.search(r"[\d$]", n)][:20]
-        if names:
-            notes.append("pages named in the proposal: " + ", ".join(names)
-                         + " - add each to the page list with its purpose")
+    # --- pages. Only a list that matches the count the proposal states fills the
+    # page rows; anything less is reported in the notes. Guessing rows from free
+    # text ("Stated twice", sentence fragments) used to replace the standard list.
+    names, stated = _page_list(text)
+    if names and stated and len(names) == stated:
+        out["scope.pages"] = _lo([[n, ""] for n in names])
+        notes.append(f"{stated} pages read from the proposal - write a purpose for each, "
+                     f"since the purpose column is part of the contract's scope")
+    elif names:
+        found = f"found {len(names)} of {stated}" if stated else f"found {len(names)}"
+        notes.append(f"pages named in the proposal ({found}): " + ", ".join(names)
+                     + " - add them to the page list with a purpose each")
 
     return {"fields": out, "notes": notes, "chars": len(text)}
 

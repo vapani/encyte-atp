@@ -22,19 +22,26 @@ Ctrl-C in the terminal stops it.
 **Starting from a proposal.** Drop a `.docx` or `.pdf` onto the top of the form and
 it fills in what it can find. It matches patterns, not meaning:
 
-- A reference looks like `26-NGA-WD-062`, and a date like *8 September 2026*.
-- The client is whoever follows *Prepared for* or *Prepared by Encyte for*. If that line
-  reads *Rob, Founder, REKT Productions*, the first name becomes the contact.
+- A reference looks like `26-NGA-WD-062`. The proposal date is taken from the cover, or from
+  a date labelled *dated*. Other dates in the body are ignored: the Ciro's proposal quotes
+  a 19 June 2026 post from the client's current site. If the cover gives only *August 2026*,
+  the notes ask for the day.
+- The client follows *Prepared for* or *Prepared by Encyte for*, including when *for* starts
+  the next line. When that line has a role in it (*Rob, Founder, REKT Productions*), the
+  client comes last and the first name becomes the contact. Without a role (*Ciro's Cakes &
+  Biscuits, Noble Park*), the client comes first.
 - The price is the standard price and the discount, read from *Standard price … Your
   investment / Final investment …* in `$` or `AUD`. The largest figure is used only when
-  there are no labels.
-- Pages are not filled in. A list such as *8 pages – Home, About, …* is reported in the
-  notes for you to add with a purpose each, because guessing rows from free text produced
-  junk that replaced the standard list.
+  there are no labels. If the price includes an allowance (plugins, licences), the notes say
+  so, because clause 5.0 charges those at cost on top of the fee.
+- Pages fill the page rows only when the names found match the page count the proposal
+  states: *8 pages – Home, …*, *Page scope · 9 pages* with names below, or *Up to 8 core
+  pages* with *A likely core set is …*. A shorter list goes in the notes instead of replacing
+  the standard list. Purposes are left empty, because they are part of the contract's scope.
 
-Checked against the NGA, REKT, Smiles 4 Miles and Colombo Seven Gin proposals. Anything it
-guessed is **shaded**, and the notes above the form say what to check. The client's legal
-name, ABN and address are rarely in a proposal, so check them on ABN Lookup.
+Checked against the NGA, REKT, both Smiles 4 Miles versions, Colombo Seven Gin and Ciro's
+proposals. Anything it guessed is **shaded**, and the notes above the form say what to check.
+The client's legal name, ABN and address are rarely in a proposal, so get them from the client.
 
 **Before it builds, the form checks** that every field the contract prints is filled in,
 that the price is not $0, that the ABN passes its check digit, that dates read like
@@ -43,6 +50,7 @@ purpose. Problems are listed in the form's own words, with the fields marked in 
 
 **Pages are editable rows**, not a preset, because every project differs. They appear
 in the contract exactly as typed.
+
 
 A build that fails validation leaves nothing behind. A build that succeeds writes
 `engagements/<client>.json`, which is the record of that deal - commit it.
