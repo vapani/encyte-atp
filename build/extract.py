@@ -60,23 +60,40 @@ def _labelled(flat, *labels):
     return None
 
 def _prepared_for(text):
-    """The block after 'Prepared for' / 'Prepared by Encyte for', joined into one line.
+    """The client named on the cover by 'Prepared for', joined into one line.
 
-    Proposals put the client here, sometimes with the contact first:
-    'Rob, Founder, REKT Productions'. Stops at a date, a reference, a URL or
-    the 'Prepared by' line that often follows.
+    Covers lay this out three ways, all seen in Encyte proposals:
+        Prepared for / Rob, Founder, REKT / Productions      (REKT)
+        Prepared by Encyte for / Smiles 4 Miles              (Smiles 4 Miles, Sep)
+        Prepared by Encyte / for Smiles 4 Miles              (Smiles 4 Miles, Aug)
+    or all on one line. The contact sometimes comes first ('Rob, Founder, ...').
+    Stops at a date, a reference, a URL, the next 'Prepared by', or a line
+    that reads like a sentence.
     """
+    def stop(line):
+        return (not line or re.match(r"prepared\b", line, re.I)
+                or re.search(r"\b(?:%s)\b|\d{2}-[A-Z0-9]+-|www|W W W|\d{4}" % "|".join(MONTHS), line)
+                or len(line.split()) > 5 or line.endswith("."))
+
     lines = [l.strip() for l in text.split("\n")]
     for i, l in enumerate(lines):
-        if re.search(r"\bprepared\s+(?:by\s+\S+\s+)?for\s*:?\s*$", l, re.I):
-            block = []
-            for nxt in lines[i + 1:i + 4]:
-                if (not nxt or re.match(r"prepared by", nxt, re.I)
-                        or re.search(r"\b(?:%s)\b|\d{2}-[A-Z0-9]+-|www|W W W|\d{4}" % "|".join(MONTHS), nxt)):
-                    break
-                block.append(nxt)
-            if block:
-                return " ".join(block)
+        if not re.match(r"prepared\b", l, re.I):
+            continue
+        rest = lines[i + 1:i + 4]
+        m = re.search(r"\bfor\b\s*:?\s*(.*)$", l, re.I)
+        if m:                                           # 'for' is on this line
+            first = m.group(1).strip()
+        elif rest and re.match(r"for\b", rest[0], re.I):  # 'for' starts the next line
+            first, rest = re.sub(r"^for\b\s*:?\s*", "", rest[0], flags=re.I).strip(), rest[1:]
+        else:
+            continue
+        block = [first] if first else []
+        for nxt in rest:
+            if stop(nxt):
+                break
+            block.append(nxt)
+        if block:
+            return " ".join(block)
     return None
 
 
