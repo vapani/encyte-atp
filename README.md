@@ -20,10 +20,22 @@ only - nothing is reachable from outside the machine and no client data leaves i
 Ctrl-C in the terminal stops it.
 
 **Starting from a proposal.** Drop a `.docx` or `.pdf` onto the top of the form and
-it fills in what it can find. It matches patterns - an ABN is eleven digits, a
-reference looks like `26-NGA-WD-062`, the price is the largest dollar figure - so
-it is confidently wrong sometimes. Anything it guessed is **shaded**, and the notes
-above the form say what to check. Read every shaded field before building.
+it fills in what it can find. It matches patterns, not meaning:
+
+- A reference looks like `26-NGA-WD-062`, and a date like *8 September 2026*.
+- The client is whoever follows *Prepared for* or *Prepared by Encyte for*. If that line
+  reads *Rob, Founder, REKT Productions*, the first name becomes the contact.
+- The price is the standard price and the discount, read from *Standard price … Your
+  investment / Final investment …* in `$` or `AUD`. The largest figure is used only when
+  there are no labels.
+- Pages are not filled in. A list such as *8 pages – Home, About, …* is reported in the
+  notes for you to add with a purpose each, because guessing rows from free text produced
+  junk that replaced the standard list.
+
+Checked against the NGA, REKT, Smiles 4 Miles and Colombo Seven Gin proposals. Anything it
+guessed is **shaded**, and the notes above the form say what to check. The client's legal
+name, ABN and address are rarely in a proposal, so check them on ABN Lookup.
+
 
 **Pages are editable rows**, not a preset, because every project differs. They appear
 in the contract exactly as typed.

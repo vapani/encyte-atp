@@ -38,6 +38,47 @@ def read_text(path):
 def _hi(v):  return {"value": v, "confidence": "high"}
 def _lo(v):  return {"value": v, "confidence": "low"}
 
+# Money as Encyte proposals write it: "$5,500", "AUD 4,850", "AUD $2,650".
+MONEY = r"(?:AUD\s*\$?|\$)\s?([\d,]+(?:\.\d{2})?)"
+
+def _amount(s):
+    try:
+        return float(s.replace(",", ""))
+    except ValueError:
+        return None
+
+# After a label, an amount may carry no currency at all: "Standard price 5,500 + GST".
+LABELLED_MONEY = r"(?:(?:AUD\s*\$?|\$)\s?([\d,]+(?:\.\d{2})?)|\b(\d{1,3}(?:,\d{3})+|\d{3,})(?=\s*\+\s*GST|\s+discount))"
+
+def _labelled(flat, *labels):
+    """Amount following the first of `labels` that has one. Labels are tried in
+    order, most specific first, so 'final investment' wins over 'investment'."""
+    for label in labels:
+        m = re.search(rf"(?:{label})[^\n$\d]{{0,40}}?\n?[^\n$\d]{{0,20}}?{LABELLED_MONEY}", flat, re.I)
+        if m:
+            return _amount(m.group(1) or m.group(2))
+    return None
+
+def _prepared_for(text):
+    """The block after 'Prepared for' / 'Prepared by Encyte for', joined into one line.
+
+    Proposals put the client here, sometimes with the contact first:
+    'Rob, Founder, REKT Productions'. Stops at a date, a reference, a URL or
+    the 'Prepared by' line that often follows.
+    """
+    lines = [l.strip() for l in text.split("\n")]
+    for i, l in enumerate(lines):
+        if re.search(r"\bprepared\s+(?:by\s+\S+\s+)?for\s*:?\s*$", l, re.I):
+            block = []
+            for nxt in lines[i + 1:i + 4]:
+                if (not nxt or re.match(r"prepared by", nxt, re.I)
+                        or re.search(r"\b(?:%s)\b|\d{2}-[A-Z0-9]+-|www|W W W|\d{4}" % "|".join(MONTHS), nxt)):
+                    break
+                block.append(nxt)
+            if block:
+                return " ".join(block)
+    return None
+
 
 def extract(path):
     text = read_text(path)
@@ -69,35 +110,58 @@ def extract(path):
     if others:
         out["client.abn"] = (_hi if len(set(others)) == 1 else _lo)(others[0])
 
-    # --- client legal name: a company/trust that is not you
+    # --- client: "Prepared for" is where proposals name the client, sometimes
+    # with the contact and their role first ("Rob, Founder, REKT Productions")
+    prepared = _prepared_for(text)
+    if prepared:
+        parts = [p.strip() for p in prepared.split(",") if p.strip()]
+        out["client.short_name"] = _lo(parts[-1])
+        if len(parts) > 1 and re.match(r"^[A-Z][a-z]+(?: [A-Z][a-z]+){0,2}$", parts[0]):
+            out["client.contact_name"] = _lo(parts[0])
+
+    # --- client legal name: a company/trust that is not you. Always a guess: a
+    # wrong legal name in a signed contract is worse than an empty field.
+    LABEL = r"^(?:client|prepared (?:by \S+ )?for|for|to|attention|company|entity)\s*:?\s+"
     ents = re.findall(r"\b([A-Z][A-Za-z0-9&.,'\- ]{2,60}?(?:Pty Ltd|Pty\. Ltd\.|Limited|Ltd|Trust))\b", flat)
     cands = []
     for e in ents:
-        e = e.strip(" ,.")
+        e = re.sub(LABEL, "", e.strip(" ,."), flags=re.I)
         if own_name.split()[0] in e.lower():
             continue
         if e.lower() not in [c.lower() for c in cands]:
             cands.append(e)
     if cands:
-        out["client.legal_name"] = (_hi if len(cands) == 1 else _lo)(cands[0])
-        short = re.split(r"\s+(?:Pty|Limited|Ltd)\b", cands[0])[0].strip()
-        out["client.short_name"] = _lo(short)
+        out["client.legal_name"] = _lo(cands[0])
+        if "client.short_name" not in out:
+            out["client.short_name"] = _lo(re.split(r"\s+(?:Pty|Limited|Ltd)\b", cands[0])[0].strip())
         if len(cands) > 1:
             notes.append(f"possible client names: {', '.join(cands[:4])}")
+    notes.append("the client's legal name, ABN and address are rarely in a proposal - "
+                 "check them against ABN Lookup (abr.business.gov.au) before building")
 
-
-    # --- money: the largest figure is usually the project price
-    amounts = []
-    for m in re.findall(r"\$\s?([\d,]+(?:\.\d{2})?)", flat):
-        try:
-            amounts.append(float(m.replace(",", "")))
-        except ValueError:
-            pass
-    big = [a for a in amounts if a >= 500]
-    if big:
-        out["fee.standard"] = _lo(max(big))
-        notes.append("price is the largest dollar figure in the document - check it is the "
-                     "build price excluding GST, not a total including GST")
+    # --- money. Proposals state a standard price and what the client pays after
+    # a discount; the form wants the standard price and the discount.
+    standard = _labelled(flat, r"standard (?:build )?(?:price|investment)(?: for this scope)?")
+    final = _labelled(flat, r"final investment|your investment|(?<!standard )\binvestment\b")
+    discount = _labelled(flat, r"discount[^\n$\d]{0,20}?less", r"less a")
+    if standard and final and final < standard:
+        out["fee.standard"] = _lo(standard)
+        out["fee.discount"] = _lo(standard - final)
+        if discount and abs(discount - (standard - final)) > 0.5:
+            notes.append(f"the stated discount ({discount:,.0f}) does not equal standard less "
+                         f"final price ({standard - final:,.0f}) - check which is right")
+        notes.append(f"price read as {standard:,.0f} standard less {standard - final:,.0f} "
+                     f"discount = {final:,.0f} excluding GST - check it against the proposal")
+    elif standard or final:
+        out["fee.standard"] = _lo(standard or final)
+        notes.append(f"price read as {standard or final:,.0f} excluding GST, with no discount "
+                     f"found - check it against the proposal")
+    else:
+        amounts = [a for a in (_amount(m) for m in re.findall(MONEY, flat)) if a and a >= 500]
+        if amounts:
+            out["fee.standard"] = _lo(max(amounts))
+            notes.append("price is the largest dollar figure in the document - check it is the "
+                         "build price excluding GST, not a total including GST")
 
     # --- duration
     m = re.search(r"\b(?:(\d{1,2})|(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve))"
@@ -112,28 +176,27 @@ def extract(path):
             out["scope.platform"] = _hi(plat)
             break
 
-    # --- contact: a person's name near "attention"/"prepared for"
-    m = re.search(r"(?:attention|prepared for|to)\s*:?\s*([A-Z][a-z]+ [A-Z][a-z]+)", flat)
-    if m:
-        out["client.contact_name"] = _lo(m.group(1))
+    # --- contact: a person's name after "Attention:" or "Dear", unless "Prepared
+    # for" already named one. A bare "to" matched phrases like "to Premium Production".
+    if "client.contact_name" not in out:
+        m = re.search(r"(?:\battention\s*:?|\bdear)\s+([A-Z][a-z]+(?: [A-Z][a-z]+)?)\b", flat)
+        if m:
+            out["client.contact_name"] = _lo(m.group(1))
 
-    # --- pages: lines that look like a page list
-    pages = []
-    for line in text.split("\n"):
-        line = line.strip(" \t|")
-        m = re.match(r"^([A-Z][A-Za-z /&'()-]{2,40}?)\s*[|–—:-]\s+(.{6,120})$", line)
-        if m and not re.search(r"\$|\d{4}|ABN", line):
-            name, purpose = m.group(1).strip(), m.group(2).strip()
-            SKIP = {"date", "ref", "subject", "to", "page", "purpose", "atp", "milestone",
-                    "description", "amount", "responsibility", "timeline", "milestone / task"}
-            if (2 < len(name) < 42
-                    and name.lower() not in SKIP
-                    and purpose.lower() not in SKIP
-                    and "|" not in purpose):
-                pages.append([name, purpose])
-    if 2 <= len(pages) <= 40:
-        out["scope.pages"] = _lo(pages)
-        notes.append(f"{len(pages)} possible page rows found - these are guesses, check every one")
+    # --- pages. Guessing page rows from free text produced junk far more often
+    # than pages ("Stated twice", sentence fragments), and it replaced the
+    # standard list. Now a list like "8 pages - Home, About, Contact" is only
+    # reported, for you to add with a purpose each.
+    # A wrapped list continues on a line that starts in lower case ("In / practice");
+    # a capital means the next line is something else, such as the price.
+    m = re.search(r"\b(?:\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)"
+                  r"\s+pages?\s*[\u2013\u2014:-]\s*([^\n]+(?:(?-i:\n[a-z])[^\n]*)?)", text, re.I)
+    if m:
+        names = re.split(r",\s*|\s+and\s+", re.sub(r"\s+", " ", m.group(1)).strip(" ."))
+        names = [n for n in names if 1 < len(n) < 40 and not re.search(r"[\d$]", n)][:20]
+        if names:
+            notes.append("pages named in the proposal: " + ", ".join(names)
+                         + " - add each to the page list with its purpose")
 
     return {"fields": out, "notes": notes, "chars": len(text)}
 
