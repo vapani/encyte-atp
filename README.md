@@ -144,24 +144,82 @@ Acentura ATP — 30/40/30 in clause 2.3 and 40/20/20 in clause 4.0, because it w
 - **no unreplaced `{{tokens}}` in the output**, including in headers and footers
 - **no em dashes** anywhere in the output. House style is the spaced en dash, and Word's
   autocorrect turns ` - ` into an em dash the moment anyone edits the template by hand
-- `engagement_type` has a template
+- `engagement_type` has a template, and is in `REVIEWED` unless the build is `--draft`
+- scope and work-plan presets belong to the engagement's type
+- the final milestone is invoiced **on acceptance**. 3.6, 3.5 and 11.0 all key to acceptance,
+  so a final milestone "at launch" contradicts them
 - the work plan cannot run past the stated duration (a "six weeks" timeline against the
-  eight-week plan builds a contract that contradicts its own schedule)
+  eight-week plan builds a contract that contradicts its own schedule), and a duration with
+  no readable week count fails rather than skipping this check
+- conditional blocks name only known types
 
-## Ready for apps, not yet built
+## Web app and mobile app ATPs — drafted, not yet reviewed
 
-`engagement_type` is validated now and rejects anything but `website`. Adding a variant means:
+`engagement_type` accepts `website`, `web_app` and `mobile_app`. All three build from the
+**same template**. An earlier plan was one template file per type. It was dropped because
+three copies of sections 4 to 14 would drift apart, which is the Acentura failure again.
+The type-specific wording sits in conditional blocks:
 
-1. `template/atp-webapp.docx` / `atp-mobileapp.docx` — same spine, section 2 reshaped
-   (`Feature | Description`, platforms and minimum OS versions instead of browser support)
-2. Conditional clause blocks: **acceptance testing**, **defect severity / SLA**,
-   **app store accounts and submission**, **environments and repositories**,
-   **third-party dependencies**, **OS deprecation**
-3. Annexure mechanism for an SLA schedule and a Data Processing Addendum
-4. `engagement.model` — fixed price / phased / time-and-materials with cap
+```
+{{?web_app|mobile_app}}  ...kept for either app type...  {{/web_app|mobile_app}}
+```
 
-The app clauses are new drafting and should be reviewed by a lawyer, not adapted from
-the website wording.
+A block names one or more types. A name that is not a known type fails the build, so a
+typo cannot silently drop a clause from every contract. Sections 4 to 14 have no blocks.
+
+| Clause | Website | Web app | Mobile app |
+|---|---|---|---|
+| 2.2 | Pages included | Features included | Features included |
+| 2.3 held items | three | three | four (adds developer accounts) |
+| 2.3 support | browsers | browsers | `scope.devices` |
+| 2.3 results | search and traffic | security, performance; no promise of error-free software | same as web app |
+| 3.5 | – | defect severity: start within 1 / 3 business days | same |
+| 3.6 | – | written acceptance criteria per feature, agreed before development | same |
+| 3.7 Handover | platform admin, site transfer | admin area, repository transfer, documentation | same |
+| 3.8 Environments and source code | – | ours until handover; production in client's accounts; permissive licences only | same |
+| 3.9 Third-party services and platform changes | – | provider changes are a change; new OS/browser versions are not a defect | same |
+| 3.10 App store release | – | – | client's developer accounts; rejection split by fault; acceptance does not wait for store review |
+
+New clauses are numbered after 3.7, so no existing clause number or cross-reference moves.
+
+**The app clauses have not been legally reviewed.** `REVIEWED` in `build/build.py` lists the
+types that may be issued, and it holds only `website`. An app build refuses unless you pass
+`--draft`. The draft then carries *DRAFT FOR LEGAL REVIEW – NOT FOR ISSUE* in red in the header
+on every page:
+
+```
+python3 build/build.py engagements/sample-mobile-app.json ~/Downloads/ATP-DRAFT-Mobile.docx --draft
+```
+
+The browser form and `new.py` offer websites only, and list only website presets. Adding a type
+to `REVIEWED` is the record that a lawyer has read its clauses, so do it in a commit of its own.
+
+**Engagement data for apps.** `scope.features` replaces `scope.pages`, with the same
+`[name, description]` rows. `scope.platform` has no default, because the stack is a decision
+for every project. `mobile_app` also requires `scope.devices`, which is written into 2.3 as
+typed, for example *"iPhones running iOS 17 or later and Android phones running Android 10
+or later"*. See `engagements/sample-web-app.json` and `sample-mobile-app.json`.
+
+**Presets are named for their type.** Examples are `inclusions.web-app`,
+`workplan.mobile-app-14week` and `features.mobile-app-starter`. The build rejects a scope or
+work-plan preset that belongs to another type. Milestone splits are shared.
+`milestones.20-30-30-20` was added for longer builds.
+
+### Before an app ATP is issued
+
+- **Legal review** of the app blocks listed above. The text to send is the output of
+  `python3 build/docxtext.py` on a `--draft` build.
+- **Privacy.** An app build almost always holds personal information, so the deferred privacy
+  decision (below) stops being optional. 3.8 deliberately says nothing yet about where
+  production data may be accessed from.
+- **Insurance.** Check that the declared business activities cover app development, not
+  only websites.
+
+### Still to build
+
+1. An annexure mechanism for an SLA schedule and a Data Processing Addendum.
+2. `engagement.model`: fixed price, phased, or time and materials with a cap.
+3. App types in the browser form and `new.py`, once the clauses are reviewed.
 
 ## Adding a jurisdiction
 
@@ -216,7 +274,9 @@ argument that the cap is unreasonable.
 
 Limits belong in the **jurisdiction pack** (`insurance.pi`, `insurance.public_liability`,
 `insurance.cyber`), not the engagement file — they are a property of the insuring entity.
-Per-deal fields do not grow — they stand at 23 in `_starter.json`. `scope.platform`, `scope.exclusions`, `terms.payment_days` and `hosting.note` fall back to `DEFAULTS` if omitted.
+Per-deal fields do not grow — they stand at 23 in `_starter.json`. `terms.payment_days` and
+`hosting.note` fall back to `DEFAULTS` if omitted, and `scope.exclusions` to the engagement
+type's entry in `TYPE_DEFAULTS`. `scope.platform` defaults to WordPress for websites only.
 
 Three things to confirm with the broker first: whether PI is claims-made and what the
 **retroactive date** is; whether limits are **any one claim** or **aggregate**; and whether the

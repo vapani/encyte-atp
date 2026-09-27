@@ -1,0 +1,48 @@
+{
+ "jurisdiction": "AU",
+ "engagement_type": "web_app",
+ "atp": {
+  "date": "27 September 2026",
+  "ref": "26-EXC-WA-073"
+ },
+ "proposal": {
+  "ref": "26-EXC-WA-072",
+  "date": "18 September 2026"
+ },
+ "client": {
+  "legal_name": "Example Co Pty Ltd",
+  "abn": "00 000 000 000",
+  "address": "10 Sample Street, Richmond VIC 3121",
+  "short_name": "Example Co",
+  "contact_name": "Sample Contact"
+ },
+ "scope": {
+  "platform": "Laravel and Vue",
+  "inclusions": "preset:inclusions.web-app",
+  "features": "preset:features.web-app-starter"
+ },
+ "hosting": {
+  "note": ""
+ },
+ "fee": {
+  "standard": 28000,
+  "discount": 0
+ },
+ "milestones": "preset:milestones.20-30-30-20",
+ "timeline": {
+  "duration": "Twelve weeks",
+  "tasks": "preset:workplan.web-app-12week"
+ },
+ "support": {
+  "included": {
+   "value": 60,
+   "unit": "days"
+  },
+  "plan": {
+   "price": 290
+  }
+ },
+ "project": {
+  "name": "Example Co client portal"
+ }
+}

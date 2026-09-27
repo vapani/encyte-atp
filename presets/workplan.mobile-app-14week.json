@@ -1,0 +1,77 @@
+[
+ [
+  "Kick-off meeting and requirements capture",
+  "{{provider.short_name}} / {{client.short_name}}",
+  "Week 1"
+ ],
+ [
+  "Apple and Google developer accounts opened in your name (Apple can take two weeks for a company)",
+  "{{client.short_name}}",
+  "Weeks 1–2"
+ ],
+ [
+  "Content, brand files and access to your accounts provided",
+  "{{client.short_name}}",
+  "Week 1"
+ ],
+ [
+  "User flows and wireframes, for review",
+  "{{provider.short_name}}",
+  "Weeks 2–3"
+ ],
+ [
+  "Wireframe feedback",
+  "{{client.short_name}}",
+  "Week 3"
+ ],
+ [
+  "Visual design of the key screens, for review",
+  "{{provider.short_name}}",
+  "Weeks 4–5"
+ ],
+ [
+  "Design freeze – you approve the look",
+  "{{client.short_name}}",
+  "Week 5"
+ ],
+ [
+  "Acceptance criteria agreed for each feature",
+  "{{provider.short_name}} / {{client.short_name}}",
+  "Week 6"
+ ],
+ [
+  "Development, with a test build every two weeks",
+  "{{provider.short_name}}",
+  "Weeks 6–11"
+ ],
+ [
+  "Feedback on each test build",
+  "{{client.short_name}}",
+  "Weeks 7–11"
+ ],
+ [
+  "Store listing text, screenshots and privacy details approved",
+  "{{client.short_name}}",
+  "Week 11"
+ ],
+ [
+  "Complete build ready for acceptance testing",
+  "{{provider.short_name}}",
+  "Week 12"
+ ],
+ [
+  "Acceptance testing on your own devices, then sign-off",
+  "{{client.short_name}}",
+  "Weeks 13–14"
+ ],
+ [
+  "Submission to the App Store and Google Play",
+  "{{provider.short_name}}",
+  "Week 14"
+ ],
+ [
+  "Handover session, documentation and administrator access",
+  "{{provider.short_name}}",
+  "Week 14"
+ ]
+]

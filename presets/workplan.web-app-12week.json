@@ -1,0 +1,72 @@
+[
+ [
+  "Kick-off meeting and requirements capture",
+  "{{provider.short_name}} / {{client.short_name}}",
+  "Week 1"
+ ],
+ [
+  "Content, brand files and access to your accounts provided",
+  "{{client.short_name}}",
+  "Week 1"
+ ],
+ [
+  "User flows and wireframes, for review",
+  "{{provider.short_name}}",
+  "Weeks 2–3"
+ ],
+ [
+  "Wireframe feedback",
+  "{{client.short_name}}",
+  "Week 3"
+ ],
+ [
+  "Visual design of the key screens, for review",
+  "{{provider.short_name}}",
+  "Week 4"
+ ],
+ [
+  "Design freeze – you approve the look",
+  "{{client.short_name}}",
+  "Week 5"
+ ],
+ [
+  "Acceptance criteria agreed for each feature",
+  "{{provider.short_name}} / {{client.short_name}}",
+  "Week 5"
+ ],
+ [
+  "Development, released to the testing environment every two weeks",
+  "{{provider.short_name}}",
+  "Weeks 6–10"
+ ],
+ [
+  "Feedback on each testing release",
+  "{{client.short_name}}",
+  "Weeks 7–10"
+ ],
+ [
+  "Approved wording supplied",
+  "{{client.short_name}}",
+  "Week 9"
+ ],
+ [
+  "Complete build ready for acceptance testing",
+  "{{provider.short_name}}",
+  "Week 10"
+ ],
+ [
+  "Acceptance testing, then sign-off",
+  "{{client.short_name}}",
+  "Weeks 11–12"
+ ],
+ [
+  "Production set-up and go-live",
+  "{{provider.short_name}}",
+  "Week 12"
+ ],
+ [
+  "Handover session, documentation and administrator access",
+  "{{provider.short_name}}",
+  "Week 12"
+ ]
+]

@@ -89,8 +89,11 @@ def money(s):
     return float(re.sub(r"[$,]", "", s))
 
 
-def presets(prefix):
+def presets(prefix, etype=None):
+    """Preset names for `prefix`, limited to one engagement type's when etype is given."""
     names = sorted(os.path.basename(p)[:-5] for p in glob.glob(f"{ROOT}/presets/{prefix}.*.json"))
+    if etype:
+        names = [n for n in names if n.startswith(f"{prefix}.{etype.replace('_', '-')}")]
     if not names:
         sys.exit(f"no presets found for '{prefix}.*' in {ROOT}/presets")
     return names
@@ -121,8 +124,8 @@ def main():
     project = ask("Project name", default=f"{short_name} website")
 
     head("Scope")
-    inclusions = pick("What's included", presets("inclusions"))
-    pages = pick("Page list", presets("pages"))
+    inclusions = pick("What's included", presets("inclusions", "website"))
+    pages = pick("Page list", presets("pages", "website"))
     platform = ask("Platform", default="WordPress")
     exclusions = ask("What is NOT included", required=False,
                      hint="Enter to keep the standard list (copywriting, legal review, "
@@ -140,7 +143,7 @@ def main():
     milestones = pick("Payment split", presets("milestones"))
 
     head("Timeline and support")
-    workplan = pick("Work plan", presets("workplan"))
+    workplan = pick("Work plan", presets("workplan", "website"))
     # default the duration to the work plan's own length, so the two cannot disagree
     m = re.search(r"(\d+)\s*week", workplan)
     words = {6: "Six", 8: "Eight", 10: "Ten", 12: "Twelve"}

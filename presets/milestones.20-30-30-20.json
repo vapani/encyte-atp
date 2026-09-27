@@ -1,0 +1,18 @@
+[
+ {
+  "percent": 20,
+  "description": "20% at kick-off, due on signing this agreement."
+ },
+ {
+  "percent": 30,
+  "description": "30% on design freeze."
+ },
+ {
+  "percent": 30,
+  "description": "30% when the complete build is ready for acceptance testing."
+ },
+ {
+  "percent": 20,
+  "description": "20% on acceptance."
+ }
+]

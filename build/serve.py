@@ -27,8 +27,14 @@ builder = _load("build")
 extractor = _load("extract")
 
 
-def presets(prefix):
-    return sorted(os.path.basename(p)[:-5] for p in glob.glob(f"{ROOT}/presets/{prefix}.*.json"))
+def presets(prefix, etype=None):
+    """Preset names for `prefix`. Scope and work-plan presets are named for their
+    engagement type (inclusions.website, workplan.mobile-app-14week); pass etype
+    to list only that type's, so an app preset never appears on the website form."""
+    names = sorted(os.path.basename(p)[:-5] for p in glob.glob(f"{ROOT}/presets/{prefix}.*.json"))
+    if etype:
+        names = [n for n in names if n.startswith(f"{prefix}.{etype.replace('_', '-')}")]
+    return names
 
 
 def preset_rows(name):
@@ -329,11 +335,12 @@ $('go').onclick = async () => {
 def render_page():
     def opts(names):
         return "".join(f'<option value="{html.escape(n)}">{html.escape(n)}</option>' for n in names)
+    # The form issues websites only: web app and mobile app clauses are still drafts.
     return (PAGE
-            .replace("__INCLUSIONS__", opts(presets("inclusions")))
+            .replace("__INCLUSIONS__", opts(presets("inclusions", "website")))
             .replace("__MILESTONES__", opts(presets("milestones")))
-            .replace("__WORKPLAN__", opts(presets("workplan")))
-            .replace("__STDPAGES__", json.dumps(preset_rows(presets("pages")[0]))))
+            .replace("__WORKPLAN__", opts(presets("workplan", "website")))
+            .replace("__STDPAGES__", json.dumps(preset_rows(presets("pages", "website")[0]))))
 
 
 # --------------------------------------------------------------------------- server
