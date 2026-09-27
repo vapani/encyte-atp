@@ -51,6 +51,13 @@ purpose. Problems are listed in the form's own words, with the fields marked in 
 **Pages are editable rows**, not a preset, because every project differs. They appear
 in the contract exactly as typed.
 
+**So is the timeline.** Section 3.1 starts as the standard eight-week plan. Rows can be
+edited, added or removed to match the proposal: a task, who is responsible (Encyte, the
+client, or both) and the week. The form shows which week the plan runs to. The build
+refuses a plan longer than the Duration, and a row with no week number, which would
+otherwise slip past that check. It also refuses a payment split that names a week the plan
+doesn't reach. 20-40-40 says *on acceptance (Week 8)*, so a seven-week job needs 30-40-30
+or 50-50. The terminal wizard still uses the work plan presets.
 
 A build that fails validation leaves nothing behind. A build that succeeds writes
 `engagements/<client>.json`, which is the record of that deal - commit it.

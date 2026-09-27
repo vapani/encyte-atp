@@ -177,6 +177,9 @@ button.link{border:none;background:none;color:var(--err);padding:4px 8px;font-si
 table{width:100%;border-collapse:collapse}
 td{padding:4px 4px 4px 0;vertical-align:top}
 td.act{width:36px}
+#tasks th{text-align:left;font-size:12px;font-weight:500;color:var(--mut);padding:0 4px 4px 0}
+#tasks .resp{width:170px}
+#tasks .when{width:130px}
 .note{background:var(--warnbg);border:1px solid #f0dcb4;border-radius:8px;padding:11px 13px;margin-top:12px;font-size:13px;color:#6b4a12}
 .note ul{margin:6px 0 0 18px;padding:0}
 #status{margin-top:14px;font-size:14px}
@@ -233,15 +236,28 @@ td.act{width:36px}
   </div>
 </div></div>
 
-<div class="card"><h2>Fee and timeline</h2><div class="grid">
+<div class="card"><h2>Fee and support</h2><div class="grid">
   <div class="field"><label>Standard price, excluding GST</label><input id="fee.standard" placeholder="e.g. 9500"><div class="badge">check this</div></div>
   <div class="field"><label>Discount, excluding GST</label><input id="fee.discount" value="0"></div>
   <div class="field"><label>Payment split</label><select id="milestones">__MILESTONES__</select></div>
-  <div class="field"><label>Work plan</label><select id="workplan">__WORKPLAN__</select></div>
-  <div class="field"><label>Duration</label><input id="timeline.duration" value="Eight weeks"><div class="badge">check this</div></div>
   <div class="field"><label>Included support</label><input id="support.value" value="60"></div>
   <div class="field"><label>Support unit</label><input id="support.unit" value="days"></div>
   <div class="field"><label>Care plan, per month excl GST</label><input id="support.price" value="99"></div>
+</div></div>
+
+<div class="card"><h2>Timeline</h2>
+<p class="hint">The work plan in section 3.1. Edit the rows to match the proposal &mdash; they appear
+  in the contract exactly as written. The plan cannot run past the duration.</p>
+<div class="grid">
+  <div class="field"><label>Duration</label><input id="timeline.duration" value="Eight weeks"><div class="badge">check this</div></div>
+  <div class="field"><label>&nbsp;</label><div id="planend" class="hint" style="margin:9px 0 0"></div></div>
+</div>
+<div style="margin-top:14px">
+  <table id="tasks"><thead><tr><th>Milestone / task</th><th class="resp">Responsibility</th><th class="when">Timeline</th><th></th></tr></thead><tbody></tbody></table>
+  <div style="margin-top:8px">
+    <button type="button" onclick="addTask('','P','')">Add task</button>
+    <button type="button" onclick="loadPlan()">Reset to standard plan</button>
+  </div>
 </div></div>
 
 <div class="bar"><button class="primary" id="go">Build the ATP</button></div>
@@ -249,7 +265,39 @@ td.act{width:36px}
 </main>
 <script>
 const STD = __STDPAGES__;
+const STDPLAN = __STDPLAN__;
 const $ = id => document.getElementById(id);
+
+// Responsibility is one of three; the contract gets the matching tokens.
+const RESP = {P: '{{provider.short_name}}', C: '{{client.short_name}}',
+              B: '{{provider.short_name}} / {{client.short_name}}'};
+const RESP_LABEL = {P: 'Encyte', C: 'Client', B: 'Encyte / Client'};
+function addTask(task, resp, when){
+  const code = RESP[resp] ? resp : (Object.keys(RESP).find(k => RESP[k] === resp) || 'P');
+  const tr = document.createElement('tr');
+  tr.innerHTML = '<td><input class="tn" placeholder="Task"></td>'
+    + '<td class="resp"><select class="tr">'
+    + Object.keys(RESP).map(k => '<option value="' + k + '">' + RESP_LABEL[k] + '</option>').join('')
+    + '</select></td>'
+    + '<td class="when"><input class="tw" placeholder="e.g. Week 3"></td>'
+    + '<td class="act"><button type="button" class="link">&times;</button></td>';
+  tr.querySelector('.tn').value = task || '';
+  tr.querySelector('.tr').value = code;
+  tr.querySelector('.tw').value = when || '';
+  tr.querySelector('button').onclick = () => { tr.remove(); planEnd(); };
+  tr.querySelector('.tw').oninput = planEnd;
+  $('tasks').querySelector('tbody').appendChild(tr);
+  planEnd();
+}
+function loadPlan(){
+  $('tasks').querySelector('tbody').innerHTML = '';
+  STDPLAN.forEach(r => addTask(r[0], r[1], r[2]));
+}
+function planEnd(){
+  const weeks = [...document.querySelectorAll('#tasks .tw')]
+    .flatMap(i => (i.value.match(/\\d+/g) || []).map(Number));
+  $('planend').textContent = weeks.length ? 'The plan runs to week ' + Math.max(...weeks) + '.' : '';
+}
 
 function addPage(name, purpose){
   const tr = document.createElement('tr');
@@ -271,6 +319,7 @@ function markGuess(id, on){
   el.closest('.field')?.classList.toggle('guess', !!on);
 }
 loadPreset();
+loadPlan();
 $('atp.date').value = new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'});
 
 // ---- proposal upload
@@ -324,11 +373,11 @@ $('go').onclick = async () => {
   const ids = ['client.legal_name','client.short_name','client.abn','client.address',
     'client.contact_name','atp.ref','atp.date','proposal.ref','proposal.date',
     'project.name','scope.inclusions','scope.platform','scope.exclusions','hosting.note',
-    'fee.standard','fee.discount','milestones','workplan','timeline.duration',
+    'fee.standard','fee.discount','milestones','timeline.duration',
     'support.value','support.unit','support.price'];
   const data = {};
   ids.forEach(i => data[i] = $(i).value.trim());
-  document.querySelectorAll('.field.bad, #pages tr.bad').forEach(el => el.classList.remove('bad'));
+  document.querySelectorAll('.field.bad, #pages tr.bad, #tasks tr.bad').forEach(el => el.classList.remove('bad'));
   // A row with a page but no purpose used to vanish from the contract without a word.
   const rows = [...document.querySelectorAll('#pages tbody tr')];
   const half = rows.filter(tr => !tr.querySelector('.pn').value.trim() !== !tr.querySelector('.pp').value.trim());
@@ -340,6 +389,17 @@ $('go').onclick = async () => {
   data.pages = rows
       .map(tr => [tr.querySelector('.pn').value.trim(), tr.querySelector('.pp').value.trim()])
       .filter(r => r[0] && r[1]);
+  const trows = [...document.querySelectorAll('#tasks tbody tr')];
+  const thalf = trows.filter(tr => !tr.querySelector('.tn').value.trim() !== !tr.querySelector('.tw').value.trim());
+  if(thalf.length){
+    thalf.forEach(tr => tr.classList.add('bad'));
+    return notBuilt(['Every timeline row needs a task and a week - ' + thalf.length
+                     + (thalf.length === 1 ? ' row is' : ' rows are') + ' incomplete'], []);
+  }
+  data.tasks = trows
+      .map(tr => [tr.querySelector('.tn').value.trim(), RESP[tr.querySelector('.tr').value],
+                  tr.querySelector('.tw').value.trim()])
+      .filter(r => r[0] && r[2]);
   $('status').innerHTML = 'Building...';
   const r = await fetch('/build', {method:'POST', headers:{'Content-Type':'application/json'},
                                    body: JSON.stringify(data)});
@@ -397,7 +457,23 @@ def form_problems(eng):
         v = eng[section][field]
         if v and not re.match(REF, v):
             out.append((f"{label} '{v}' should look like 26-NGA-WD-062", [key]))
+    # Timeline rows. A row with no week number would slip past the check that the
+    # plan fits the duration, and the responsibility can only be one of three.
+    for row in eng["timeline"]["tasks"]:
+        if not (isinstance(row, list) and len(row) == 3):
+            out.append(("A timeline row could not be read - reset to the standard plan", []))
+            continue
+        task, resp, when = row
+        if resp not in RESPONSIBLE:
+            out.append((f"Timeline row '{task}' has an unknown responsibility", []))
+        if not builder.weeks_in(when):
+            out.append((f"Timeline row '{task}' should say which week, e.g. Week 3 or Weeks 4-5 "
+                        f"(it says '{when}')", []))
     return out
+
+
+RESPONSIBLE = {"{{provider.short_name}}", "{{client.short_name}}",
+               "{{provider.short_name}} / {{client.short_name}}"}
 
 
 LABELS = {
@@ -420,8 +496,14 @@ def friendly(err):
         return "The discount is more than the standard price", ["fee.standard", "fee.discount"]
     if "price is $0" in err:
         return "The standard price is empty or $0", ["fee.standard"]
-    if "work plan runs" in err or "timeline.duration" in err:
-        return err[0].upper() + err[1:], ["timeline.duration", "workplan"]
+    if "timeline.tasks is empty" in err:
+        return "Add at least one timeline row", []
+    if "work plan runs" in err:
+        m = re.search(r"week (\d+) but the timeline says (\d+) weeks", err)
+        return (f"The timeline runs to week {m.group(1)} but the duration says {m.group(2)} weeks - "
+                f"change the duration or the timeline rows" if m else err), ["timeline.duration"]
+    if "timeline.duration" in err:
+        return err[0].upper() + err[1:], ["timeline.duration"]
     if "milestone" in err:
         return err[0].upper() + err[1:], ["milestones"]
     return err[0].upper() + err[1:], []
@@ -438,7 +520,7 @@ def render_page():
     return (PAGE
             .replace("__INCLUSIONS__", opts(presets("inclusions", "website")))
             .replace("__MILESTONES__", opts(presets("milestones"), DEFAULT_SPLIT))
-            .replace("__WORKPLAN__", opts(presets("workplan", "website")))
+            .replace("__STDPLAN__", json.dumps(preset_rows(presets("workplan", "website")[0])))
             .replace("__STDPAGES__", json.dumps(preset_rows(presets("pages", "website")[0]))))
 
 
@@ -514,7 +596,7 @@ class Handler(BaseHTTPRequestHandler):
                 "fee": {"standard": num("fee.standard"), "discount": num("fee.discount")},
                 "milestones": f'preset:{d.get("milestones")}',
                 "timeline": {"duration": d.get("timeline.duration", ""),
-                             "tasks": f'preset:{d.get("workplan")}'},
+                             "tasks": d.get("tasks") or []},
                 "support": {"included": {"value": int(num("support.value", 60)),
                                          "unit": d.get("support.unit") or "days"},
                             "plan": {"price": num("support.price", 99)}},

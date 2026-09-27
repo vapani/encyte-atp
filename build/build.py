@@ -153,6 +153,19 @@ def validate(eng, jur):
     if dur and plan and plan > dur:
         errs.append(f"work plan runs to week {plan} but the timeline says {dur} weeks "
                     f"- pick a matching workplan preset, or change the duration")
+    # A milestone that names a week must agree with the plan. 20-40-40 says 'on
+    # acceptance (Week 8)', which contradicts a seven- or ten-week timeline.
+    if plan:
+        last = len(eng["milestones"])
+        for i, ms in enumerate(eng["milestones"], 1):
+            named = [int(n) for a, b in re.findall(r"\bweeks?\s+(\d+)(?:\s*[–-]\s*(\d+))?",
+                                                  ms["description"], re.I) for n in (a, b) if n]
+            if not named:
+                continue
+            wk = max(named)
+            if wk > plan or (i == last and wk != plan):
+                errs.append(f"payment milestone {i} says week {wk} but the timeline ends in week {plan} "
+                            f"- choose a payment split that does not name weeks, or change the timeline")
     etype = eng.get("engagement_type")
     if etype not in TYPES:
         errs.append(f"engagement_type '{etype}' has no template (one of: {', '.join(TYPES)})")
