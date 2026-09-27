@@ -9,7 +9,7 @@ prefill it, review every field, click Build. The .docx downloads.
 Binds to localhost only: nothing outside this machine can reach it, and no
 client data leaves the machine.
 """
-import glob, html, importlib.util, io, json, os, re, sys, tempfile, threading, webbrowser
+import glob, html, importlib.util, io, json, os, re, shutil, sys, tempfile, threading, webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -25,6 +25,7 @@ def _load(name):
 
 builder = _load("build")
 extractor = _load("extract")
+BUILD_LOCK = threading.Lock()
 
 
 def presets(prefix, etype=None):
@@ -61,6 +62,12 @@ def record_engagement(eng, slug):
     token = os.environ.get("ATP_GITHUB_TOKEN")
 
     if not token:
+        # Hosted, the container's disk is wiped whenever it sleeps, so a file
+        # written there is not a record. Say so rather than report success.
+        if os.environ.get("ATP_HOST", "127.0.0.1") not in ("127.0.0.1", "localhost"):
+            return False, ("this server has no ATP_GITHUB_TOKEN, so there is nowhere permanent "
+                           "to keep the record - keep the downloaded contract, and set the token "
+                           "so future records are committed")
         try:
             path = os.path.join(os.environ.get("ATP_ENGAGEMENTS", f"{ROOT}/engagements"),
                                 f"{slug}.json")
@@ -173,7 +180,9 @@ td.act{width:36px}
 .note ul{margin:6px 0 0 18px;padding:0}
 #status{margin-top:14px;font-size:14px}
 .ok{color:var(--teal);font-weight:500}
-.bad{color:var(--err);white-space:pre-wrap}
+#status .bad{color:var(--err)}
+#status .bad ul{margin:6px 0 0 18px;padding:0}
+.field.bad input,.field.bad select,tr.bad input{border-color:var(--err);background:#fdf1f0}
 .bar{position:sticky;bottom:0;background:linear-gradient(transparent,var(--bg) 28%);padding:22px 0 10px;text-align:right}
 </style></head><body>
 <header><h1>New authorisation to proceed</h1>
@@ -190,19 +199,19 @@ td.act{width:36px}
 </div>
 
 <div class="card"><h2>Client</h2><div class="grid">
-  <div class="field full"><label>Legal entity name</label><input id="client.legal_name" placeholder="Acme Holdings Pty Ltd"><div class="badge">check this</div></div>
-  <div class="field"><label>Trading / short name</label><input id="client.short_name" placeholder="Acme"><div class="badge">check this</div></div>
-  <div class="field"><label>ABN</label><input id="client.abn" placeholder="51 824 753 556"><div class="badge">check this</div></div>
-  <div class="field full"><label>Address</label><input id="client.address" placeholder="12 Example St, Richmond VIC 3121"><div class="badge">check this</div></div>
-  <div class="field"><label>Contact person</label><input id="client.contact_name" placeholder="Jane Doe"><div class="badge">check this</div></div>
+  <div class="field full"><label>Legal entity name</label><input id="client.legal_name" placeholder="e.g. Acme Holdings Pty Ltd"><div class="badge">check this</div></div>
+  <div class="field"><label>Trading / short name</label><input id="client.short_name" placeholder="e.g. Acme"><div class="badge">check this</div></div>
+  <div class="field"><label>ABN</label><input id="client.abn" placeholder="e.g. 51 824 753 556"><div class="badge">check this</div></div>
+  <div class="field full"><label>Address</label><input id="client.address" placeholder="e.g. 12 Example St, Richmond VIC 3121"><div class="badge">check this</div></div>
+  <div class="field"><label>Contact person</label><input id="client.contact_name" placeholder="e.g. Jane Doe"><div class="badge">check this</div></div>
 </div></div>
 
 <div class="card"><h2>References</h2><div class="grid">
-  <div class="field"><label>ATP reference</label><input id="atp.ref" placeholder="26-ACM-WD-001"><div class="badge">check this</div></div>
+  <div class="field"><label>ATP reference</label><input id="atp.ref" placeholder="e.g. 26-ACM-WD-001"><div class="badge">check this</div></div>
   <div class="field"><label>ATP date</label><input id="atp.date"><div class="badge">check this</div></div>
-  <div class="field"><label>Proposal reference</label><input id="proposal.ref" placeholder="26-ACM-WD-001"><div class="badge">check this</div></div>
-  <div class="field"><label>Proposal date</label><input id="proposal.date" placeholder="8 September 2026"><div class="badge">check this</div></div>
-  <div class="field full"><label>Project name</label><input id="project.name" placeholder="Acme website"><div class="badge">check this</div></div>
+  <div class="field"><label>Proposal reference</label><input id="proposal.ref" placeholder="e.g. 26-ACM-WD-001"><div class="badge">check this</div></div>
+  <div class="field"><label>Proposal date</label><input id="proposal.date" placeholder="e.g. 8 September 2026"><div class="badge">check this</div></div>
+  <div class="field full"><label>Project name</label><input id="project.name" placeholder="e.g. Acme website"><div class="badge">check this</div></div>
 </div></div>
 
 <div class="card"><h2>Scope</h2><div class="grid">
@@ -224,7 +233,7 @@ td.act{width:36px}
 </div></div>
 
 <div class="card"><h2>Fee and timeline</h2><div class="grid">
-  <div class="field"><label>Standard price, excluding GST</label><input id="fee.standard" placeholder="9500"><div class="badge">check this</div></div>
+  <div class="field"><label>Standard price, excluding GST</label><input id="fee.standard" placeholder="e.g. 9500"><div class="badge">check this</div></div>
   <div class="field"><label>Discount, excluding GST</label><input id="fee.discount" value="0"></div>
   <div class="field"><label>Payment split</label><select id="milestones">__MILESTONES__</select></div>
   <div class="field"><label>Work plan</label><select id="workplan">__WORKPLAN__</select></div>
@@ -297,6 +306,17 @@ async function send(f){
 }
 
 // ---- build
+function notBuilt(errors, fields){
+  fields.forEach(id => $(id)?.closest('.field')?.classList.add('bad'));
+  const box = document.createElement('div');
+  box.className = 'bad';
+  box.innerHTML = '<strong>Not built.</strong>';
+  const ul = document.createElement('ul');
+  errors.forEach(e => { const li = document.createElement('li'); li.textContent = e; ul.appendChild(li); });
+  box.appendChild(ul);
+  $('status').replaceChildren(box);
+  $('status').scrollIntoView({behavior:'smooth', block:'center'});
+}
 $('go').onclick = async () => {
   const ids = ['client.legal_name','client.short_name','client.abn','client.address',
     'client.contact_name','atp.ref','atp.date','proposal.ref','proposal.date',
@@ -305,7 +325,16 @@ $('go').onclick = async () => {
     'support.value','support.unit','support.price'];
   const data = {};
   ids.forEach(i => data[i] = $(i).value.trim());
-  data.pages = [...document.querySelectorAll('#pages tbody tr')]
+  document.querySelectorAll('.field.bad, #pages tr.bad').forEach(el => el.classList.remove('bad'));
+  // A row with a page but no purpose used to vanish from the contract without a word.
+  const rows = [...document.querySelectorAll('#pages tbody tr')];
+  const half = rows.filter(tr => !tr.querySelector('.pn').value.trim() !== !tr.querySelector('.pp').value.trim());
+  if(half.length){
+    half.forEach(tr => tr.classList.add('bad'));
+    return notBuilt(['Every page needs a name and a purpose - ' + half.length
+                     + (half.length === 1 ? ' row is' : ' rows are') + ' incomplete'], []);
+  }
+  data.pages = rows
       .map(tr => [tr.querySelector('.pn').value.trim(), tr.querySelector('.pp').value.trim()])
       .filter(r => r[0] && r[1]);
   $('status').innerHTML = 'Building...';
@@ -313,8 +342,7 @@ $('go').onclick = async () => {
                                    body: JSON.stringify(data)});
   if(r.headers.get('Content-Type') === 'application/json'){
     const j = await r.json();
-    $('status').innerHTML = '<div class="bad"><strong>Not built.</strong>\\n' + j.errors.join('\\n') + '</div>';
-    return;
+    return notBuilt(j.errors, j.fields || []);
   }
   const blob = await r.blob();
   const name = (r.headers.get('X-Filename') || 'ATP.docx');
@@ -332,13 +360,81 @@ $('go').onclick = async () => {
 </script></body></html>"""
 
 
+def abn_valid(abn):
+    """The ABN check digit: subtract 1 from the first digit, weight, sum, divide by 89."""
+    d = [int(c) for c in re.sub(r"\D", "", abn)]
+    if len(d) != 11:
+        return False
+    d[0] -= 1
+    return sum(x * w for x, w in zip(d, (10, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19))) % 89 == 0
+
+
+DATE = r"^\d{1,2} (?:January|February|March|April|May|June|July|August|September|October|November|December) \d{4}$"
+REF = r"^\d{2}-[A-Z0-9]+-[A-Z]{2}-\d{3}$"
+
+
+def form_problems(eng):
+    """Checks that suit typed input, on top of build.py's own validation.
+
+    Each is (message, [form field ids]) so the form can mark the fields.
+    """
+    out = []
+    abn = eng["client"]["abn"]
+    if abn.strip() and not abn_valid(abn):
+        out.append((f"The ABN {abn} is not a valid ABN - check for a typo, or look it up at "
+                    f"abr.business.gov.au", ["client.abn"]))
+    for key, label in (("atp.date", "ATP date"), ("proposal.date", "Proposal date")):
+        section, field = key.split(".")
+        v = eng[section][field]
+        if v and not re.match(DATE, v):
+            out.append((f"{label} '{v}' should be written like 8 September 2026 - "
+                        f"it is printed in the contract exactly as typed", [key]))
+    for key, label in (("atp.ref", "ATP reference"), ("proposal.ref", "Proposal reference")):
+        section, field = key.split(".")
+        v = eng[section][field]
+        if v and not re.match(REF, v):
+            out.append((f"{label} '{v}' should look like 26-NGA-WD-062", [key]))
+    return out
+
+
+LABELS = {
+    "client.legal_name": "Legal entity name", "client.short_name": "Trading / short name",
+    "client.abn": "ABN", "client.address": "Address", "client.contact_name": "Contact person",
+    "atp.ref": "ATP reference", "atp.date": "ATP date", "proposal.ref": "Proposal reference",
+    "proposal.date": "Proposal date", "project.name": "Project name", "scope.platform": "Platform",
+    "timeline.duration": "Duration",
+}
+
+
+def friendly(err):
+    """build.py's validation message -> (message in the form's words, [field ids])."""
+    m = re.match(r"missing or empty: ([\w.]+)$", err)
+    if m and m.group(1) in LABELS:
+        return f"{LABELS[m.group(1)]} is empty", [m.group(1)]
+    if "scope.pages is empty" in err:
+        return "Add at least one page, with its purpose", []
+    if "discount exceeds" in err:
+        return "The discount is more than the standard price", ["fee.standard", "fee.discount"]
+    if "price is $0" in err:
+        return "The standard price is empty or $0", ["fee.standard"]
+    if "work plan runs" in err or "timeline.duration" in err:
+        return err[0].upper() + err[1:], ["timeline.duration", "workplan"]
+    if "milestone" in err:
+        return err[0].upper() + err[1:], ["milestones"]
+    return err[0].upper() + err[1:], []
+
+
+DEFAULT_SPLIT = "milestones.20-40-40"
+
+
 def render_page():
-    def opts(names):
-        return "".join(f'<option value="{html.escape(n)}">{html.escape(n)}</option>' for n in names)
+    def opts(names, selected=None):
+        return "".join(f'<option value="{html.escape(n)}"{" selected" if n == selected else ""}>'
+                       f'{html.escape(n)}</option>' for n in names)
     # The form issues websites only: web app and mobile app clauses are still drafts.
     return (PAGE
             .replace("__INCLUSIONS__", opts(presets("inclusions", "website")))
-            .replace("__MILESTONES__", opts(presets("milestones")))
+            .replace("__MILESTONES__", opts(presets("milestones"), DEFAULT_SPLIT))
             .replace("__WORKPLAN__", opts(presets("workplan", "website")))
             .replace("__STDPAGES__", json.dumps(preset_rows(presets("pages", "website")[0]))))
 
@@ -428,34 +524,50 @@ class Handler(BaseHTTPRequestHandler):
 
         # build from a scratch file first: a rejected build must not leave a
         # half-filled engagement behind in engagements/
-        slug = slugify(eng["client"]["short_name"])
         tmpdir = tempfile.mkdtemp()
+        try:
+            self.build_in(tmpdir, eng)
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def build_in(self, tmpdir, eng):
+        slug = slugify(eng["client"]["short_name"])
         path = os.path.join(tmpdir, f"{slug}.json")
         json.dump(eng, open(path, "w"), indent=1, ensure_ascii=False)
         open(path, "a").write("\n")
 
-        out = os.path.join(tempfile.gettempdir(),
-                           f"ATP-{re.sub(r'[^A-Za-z0-9]+', '-', eng['client']['short_name'] or 'Client')}.docx")
-        buf, real = io.StringIO(), sys.stdout
-        sys.stdout = buf
+        # Check everything first and report it all at once, in the form's own words.
         try:
-            builder.build(path, out)
-        except SystemExit:
-            sys.stdout = real
-            errs = [l.strip(" -") for l in buf.getvalue().splitlines() if l.strip().startswith("-")]
-            return self._send(200, json.dumps({"errors": errs or ["validation failed"]}))
+            problems = form_problems(eng) + [friendly(e) for e in builder.validate(*builder.load(path))]
         except Exception as e:
-            sys.stdout = real
-            return self._send(200, json.dumps({"errors": [str(e)]}))
-        finally:
-            sys.stdout = real
+            problems = [(f"could not read the form: {e}", [])]
+        if problems:
+            return self._send(200, json.dumps({"errors": [m for m, _ in problems],
+                                               "fields": sorted({f for _, fs in problems for f in fs})}))
+
+        name = f"ATP-{re.sub(r'[^A-Za-z0-9]+', '-', eng['client']['short_name'] or 'Client')}.docx"
+        out = os.path.join(tmpdir, name)
+        # build() prints its report; capturing stdout is process-wide, so one build at a time
+        with BUILD_LOCK:
+            buf, real = io.StringIO(), sys.stdout
+            sys.stdout = buf
+            try:
+                builder.build(path, out)
+            except SystemExit:
+                sys.stdout = real
+                errs = [l.strip(" -") for l in buf.getvalue().splitlines() if l.strip().startswith("-")]
+                return self._send(200, json.dumps({"errors": errs or ["validation failed"]}))
+            except Exception as e:
+                sys.stdout = real
+                return self._send(200, json.dumps({"errors": [str(e)]}))
+            finally:
+                sys.stdout = real
 
         # It built, so record what was issued.
         recorded, record_msg = record_engagement(eng, slug)
         print(f"  record: {record_msg}")
 
         data = open(out, "rb").read()
-        os.unlink(out)
         self._send(200, data,
                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                    {"X-Filename": os.path.basename(out),

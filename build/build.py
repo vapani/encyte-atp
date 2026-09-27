@@ -142,6 +142,8 @@ def validate(eng, jur):
                     "depend on it")
     if eng["fee"]["discount"] > eng["fee"]["standard"]:
         errs.append("discount exceeds standard price")
+    elif eng["fee"]["standard"] - eng["fee"]["discount"] <= 0:
+        errs.append("the price is $0 - enter the standard price excluding tax")
     # the work plan must fit inside the stated duration
     dur = weeks_in(eng.get("timeline", {}).get("duration", ""))
     plan = max([weeks_in(t[-1]) for t in eng.get("timeline", {}).get("tasks", []) if t] or [0])
@@ -158,8 +160,10 @@ def validate(eng, jur):
     for name in eng.get("_preset_mismatches", []):
         errs.append(f"preset '{name}' is not a {etype} preset - pick one named "
                     f"{name.split('.')[0]}.{etype.replace('_', '-')}...")
-    required = ["project.name","client.legal_name","client.abn","client.short_name","atp.ref","atp.date",
-                "proposal.ref","scope.platform","timeline.duration"]
+    # every field the contract prints: an empty one reads as 'To: - Acme' or 'dated .'
+    required = ["project.name","client.legal_name","client.abn","client.short_name","client.address",
+                "client.contact_name","atp.ref","atp.date","proposal.ref","proposal.date",
+                "scope.platform","timeline.duration"]
     if etype == "mobile_app":
         required.append("scope.devices")            # 2.3 names the phones and OS versions
     for path in required:

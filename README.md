@@ -36,6 +36,10 @@ Checked against the NGA, REKT, Smiles 4 Miles and Colombo Seven Gin proposals. A
 guessed is **shaded**, and the notes above the form say what to check. The client's legal
 name, ABN and address are rarely in a proposal, so check them on ABN Lookup.
 
+**Before it builds, the form checks** that every field the contract prints is filled in,
+that the price is not $0, that the ABN passes its check digit, that dates read like
+*8 September 2026* and references like *26-NGA-WD-062*, and that no page is missing its
+purpose. Problems are listed in the form's own words, with the fields marked in red.
 
 **Pages are editable rows**, not a preset, because every project differs. They appear
 in the contract exactly as typed.

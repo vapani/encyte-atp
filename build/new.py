@@ -66,6 +66,10 @@ def v_abn(s):
     digits = re.sub(r"\s", "", s)
     if not digits.isdigit() or len(digits) != 11:
         return "an ABN is 11 digits, e.g. 62 633 260 474"
+    d = [int(c) for c in digits]
+    d[0] -= 1                                   # the ABN check digit rule
+    if sum(x * w for x, w in zip(d, (10, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19))) % 89:
+        return "not a valid ABN - check for a typo, or look it up at abr.business.gov.au"
 
 
 def v_money(s):
@@ -138,9 +142,13 @@ def main():
     discount = money(ask("Discount, excluding tax", default="0", check=v_money))
     if discount > standard:
         sys.exit(f"{RED}discount exceeds the standard price{RESET}")
+    if standard - discount <= 0:
+        sys.exit(f"{RED}the price is $0 - start again with the standard price{RESET}")
     if discount:
         print(f"{DIM}  -> client pays {standard - discount:,.2f} excluding tax{RESET}")
-    milestones = pick("Payment split", presets("milestones"))
+    splits = presets("milestones")
+    milestones = pick("Payment split", splits,
+                      splits.index("milestones.20-40-40") if "milestones.20-40-40" in splits else 0)
 
     head("Timeline and support")
     workplan = pick("Work plan", presets("workplan", "website"))
