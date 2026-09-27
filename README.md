@@ -116,8 +116,9 @@ The clauses that took work to get right, and must not drift deal to deal:
 - Moral rights consent, Part IX Copyright Act 1968 (9.0)
 - Background IP carve-out and perpetual licence (9.0)
 - Mutual confidentiality (8.0)
-- Liability cap + confidentiality carve-out (10.0)
-- Narrow indemnity with negligence carve-back (10.0)
+- Liability cap, aggregate and however arising, with **no** confidentiality carve-out (10.0)
+- Narrow indemnity with negligence carve-back, uncapped only for third-party IP and
+  privacy claims, with notice, no-admission and control-of-defence (10.0)
 - Approvals clause — *we will not publish or build on anything you have not approved* (6.5)
 - Support hours and file retention (fixed; support hours live in the jurisdiction pack)
 - Extra design rounds — quoted and approved in writing, never a stated rate
