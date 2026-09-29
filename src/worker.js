@@ -45,6 +45,12 @@ function same(a, b) {
 
 export default {
   async fetch(request, env) {
+    // Open access is an explicit, visible choice in wrangler.jsonc, never the
+    // side effect of a missing secret: deleting ATP_PASSWORD must not open the form.
+    if (env.ATP_AUTH === "off") {
+      return getContainer(env.ATP_CONTAINER, "shared").fetch(request);
+    }
+
     const expected = env.ATP_PASSWORD;
 
     // Refuse to serve at all rather than fall open if the secret is missing.
