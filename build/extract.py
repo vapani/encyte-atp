@@ -52,7 +52,6 @@ MONEY = rf"(?:AUD\s*\$?|\$)\s?({NUMBER})"
 
 LOW_PRICE = 500      # below this, a build price read from a proposal is almost certainly a misread
 
-
 def _amount(s):
     try:
         return float(re.sub(r"[,\s]", "", s))
@@ -140,6 +139,28 @@ def _page_list(text):
     return best, stated
 
 
+def _contract_type(text):
+    """Suggest website / web_app / mobile_app from how the proposal talks, or None.
+
+    Measured on Encyte proposals: website proposals say 'website' 2-32 times and
+    'platform'/'dashboard' at most 5; the Business Marketplace web app proposal says
+    'platform', 'portal' or 'dashboard' 38 times against 'website' 3. Only a clear
+    lead counts - anything close is left for you to choose.
+    """
+    count = lambda pat: len(re.findall(pat, text, re.I))
+    mobile = count(r"\b(?:ios|android|app store|google play|mobile app)\b")
+    webapp = count(r"\b(?:web app|web application|platform|portal|dashboards?|saas)\b")
+    website = count(r"\bwebsites?\b")
+    if mobile >= 3 and mobile > website:
+        return "mobile_app", f"it mentions iOS, Android or the app stores {mobile} times"
+    if webapp >= 10 and webapp > 2 * website:
+        return "web_app", (f"it talks about a platform, portal or dashboards {webapp} times "
+                           f"and a website {website}")
+    if website >= 2 and website > webapp:
+        return "website", None
+    return None, None
+
+
 def _prepared_for(text):
     """The client named on the cover by 'Prepared for', joined into one line.
 
@@ -161,11 +182,11 @@ def _prepared_for(text):
         if not re.match(r"prepared\b", l, re.I):
             continue
         rest = lines[i + 1:i + 4]
-        m = re.search(r"\bfor\b\s*:?\s*(.*)$", l, re.I)
+        m = re.search(r"\bfor\b\s*[:|]?\s*(.*)$", l, re.I)   # 'Prepared for | X' is a Word table row
         if m:                                           # 'for' is on this line
             first = m.group(1).strip()
         elif rest and re.match(r"for\b", rest[0], re.I):  # 'for' starts the next line
-            first, rest = re.sub(r"^for\b\s*:?\s*", "", rest[0], flags=re.I).strip(), rest[1:]
+            first, rest = re.sub(r"^for\b\s*[:|]?\s*", "", rest[0], flags=re.I).strip(), rest[1:]
         else:
             continue
         block = [first] if first else []
@@ -194,6 +215,16 @@ def extract(path):
         out["atp.ref"] = _lo(refs[0])          # usually the same series, often not identical
         if len(set(refs)) > 1:
             notes.append(f"several references found ({', '.join(sorted(set(refs)))}) - first used")
+
+    # --- what kind of contract. Only an app suggestion gets a note: website is the default.
+    kind, why = _contract_type(text)
+    if kind:
+        out["engagement_type"] = _lo(kind)
+        if why:
+            label = {"web_app": "a web app", "mobile_app": "a mobile app"}[kind]
+            notes.append(f"this looks like {label} proposal - {why} - so the contract type is set to "
+                         f"{label[2:] if label.startswith('a ') else label}. Check it, and note that app "
+                         f"contracts are drafts until the app terms are legally reviewed")
 
     # --- the proposal date, written as 8 September 2026. Only the cover, or a date
     # labelled 'dated', counts: the body quotes other dates - the Ciro's proposal

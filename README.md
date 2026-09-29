@@ -48,6 +48,21 @@ that the price is not $0, that the ABN passes its check digit, that dates read l
 *8 September 2026* and references like *26-NGA-WD-062*, and that no page is missing its
 purpose. Problems are listed in the form's own words, with the fields marked in red.
 
+**Choose the contract type first** - Website, Web app or Mobile app. It switches everything
+that depends on it:
+
+- *What's included*, the list in 2.2 (pages for a website, features for an app);
+- the platform, with no default for apps;
+- a *Devices and operating systems* field for a mobile app;
+- the standard timeline (8, 12 or 14 weeks), duration and payment split.
+
+Anything you've already edited stays when you switch. A proposal upload suggests the type:
+it picks *Web app* when the proposal talks about a platform, portal or dashboards far more
+than a website, and *Mobile app* when it keeps mentioning iOS, Android or the app stores.
+**Web app and mobile app contracts come out as drafts** (see below): marked *DRAFT FOR LEGAL
+REVIEW – NOT FOR ISSUE* on every page, named `ATP-DRAFT-…`, and not recorded as issued
+engagements.
+
 **Pages are editable rows**, not a preset, because every project differs. They appear
 in the contract exactly as typed.
 
@@ -222,8 +237,11 @@ on every page:
 python3 build/build.py engagements/sample-mobile-app.json ~/Downloads/ATP-DRAFT-Mobile.docx --draft
 ```
 
-The browser form and `new.py` offer websites only, and list only website presets. Adding a type
-to `REVIEWED` is the record that a lawyer has read its clauses, so do it in a commit of its own.
+The browser form offers all three types, and builds web app and mobile app contracts as marked
+drafts, so a draft can be produced for legal review but not issued by mistake. `new.py`
+still offers websites only. Adding a type to `REVIEWED` is the record that a lawyer has read
+its clauses, so do it in a commit of its own. From then on the form issues that type
+normally, with no other change.
 
 **Engagement data for apps.** `scope.features` replaces `scope.pages`, with the same
 `[name, description]` rows. `scope.platform` has no default, because the stack is a decision
@@ -250,7 +268,9 @@ work-plan preset that belongs to another type. Milestone splits are shared.
 
 1. An annexure mechanism for an SLA schedule and a Data Processing Addendum.
 2. `engagement.model`: fixed price, phased, or time and materials with a cap.
-3. App types in the browser form and `new.py`, once the clauses are reviewed.
+3. App types in `new.py`. The browser form already has them, as drafts.
+4. Reading an app proposal's features. The Business Marketplace proposal has a clean
+   *Area | Purpose* table that could fill the feature rows, descriptions included.
 
 ## Adding a jurisdiction
 

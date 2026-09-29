@@ -202,6 +202,16 @@ td.act{width:36px}
   <div id="xnotes"></div>
 </div>
 
+<div class="card"><h2>What are we building?</h2><div class="grid">
+  <div class="field"><label>Contract type</label><select id="engagement_type" onchange="applyType(this.value)">
+    <option value="website">Website</option><option value="web_app">Web app</option>
+    <option value="mobile_app">Mobile app</option></select><div class="badge">check this</div></div>
+</div>
+<div id="draftnote" class="note" style="display:none"><strong>Draft only.</strong> The web app and
+  mobile app terms have not been legally reviewed yet. This contract will be marked
+  <em>DRAFT FOR LEGAL REVIEW &ndash; NOT FOR ISSUE</em> on every page. Do not send it to a client.</div>
+</div>
+
 <div class="card"><h2>Client</h2><div class="grid">
   <div class="field full"><label>Legal entity name</label><input id="client.legal_name" placeholder="e.g. Acme Holdings Pty Ltd"><div class="badge">check this</div></div>
   <div class="field"><label>Trading / short name</label><input id="client.short_name" placeholder="e.g. Acme"><div class="badge">check this</div></div>
@@ -219,19 +229,21 @@ td.act{width:36px}
 </div></div>
 
 <div class="card"><h2>Scope</h2><div class="grid">
-  <div class="field"><label>What's included</label><select id="scope.inclusions">__INCLUSIONS__</select></div>
+  <div class="field"><label>What's included</label><select id="scope.inclusions"></select></div>
   <div class="field"><label>Platform</label><input id="scope.platform" value="WordPress"><div class="badge">check this</div></div>
+  <div class="field full" id="devices-field" style="display:none"><label>Devices and operating systems</label>
+    <input id="scope.devices" placeholder="e.g. iPhones running iOS 17 or later and Android phones running Android 10 or later"><div class="badge">check this</div></div>
   <div class="field full"><label>What is <em>not</em> included</label>
     <input id="scope.exclusions" placeholder="leave blank for the standard list"></div>
   <div class="field full"><label>Hosting note</label>
     <input id="hosting.note" placeholder="optional, e.g. Indicatively about USD $14 a month."></div>
 </div>
 <div style="margin-top:18px">
-  <label>Pages</label>
+  <label id="list-label">Pages</label>
   <p class="hint" style="margin:0 0 8px">Every project differs. Edit these rows &mdash; they appear in the contract exactly as written.</p>
   <table id="pages"><tbody></tbody></table>
   <div style="margin-top:8px">
-    <button type="button" onclick="addPage('','')">Add page</button>
+    <button type="button" id="add-item" onclick="addPage('','')">Add page</button>
     <button type="button" onclick="loadPreset()">Reset to standard list</button>
   </div>
 </div></div>
@@ -264,8 +276,10 @@ td.act{width:36px}
 <div id="status"></div>
 </main>
 <script>
-const STD = __STDPAGES__;
-const STDPLAN = __STDPLAN__;
+// Per contract type: inclusions presets, standard page or feature list, standard plan,
+// duration, payment split, platform, labels, and whether the terms are still a draft.
+const TYPES = __TYPES__;
+let current = 'website';
 const $ = id => document.getElementById(id);
 
 // Responsibility is one of three; the contract gets the matching tokens.
@@ -291,7 +305,7 @@ function addTask(task, resp, when){
 }
 function loadPlan(){
   $('tasks').querySelector('tbody').innerHTML = '';
-  STDPLAN.forEach(r => addTask(r[0], r[1], r[2]));
+  TYPES[current].plan.forEach(r => addTask(r[0], r[1], r[2]));
 }
 function planEnd(){
   const weeks = [...document.querySelectorAll('#tasks .tw')]
@@ -301,8 +315,8 @@ function planEnd(){
 
 function addPage(name, purpose){
   const tr = document.createElement('tr');
-  tr.innerHTML = '<td><input class="pn" placeholder="Page"></td>'
-               + '<td><input class="pp" placeholder="Purpose"></td>'
+  tr.innerHTML = '<td><input class="pn" placeholder="' + TYPES[current].item + '"></td>'
+               + '<td><input class="pp" placeholder="' + TYPES[current].desc + '"></td>'
                + '<td class="act"><button type="button" class="link">&times;</button></td>';
   tr.querySelector('.pn').value = name || '';
   tr.querySelector('.pp').value = purpose || '';
@@ -311,15 +325,52 @@ function addPage(name, purpose){
 }
 function loadPreset(){
   $('pages').querySelector('tbody').innerHTML = '';
-  STD.forEach(r => addPage(r[0], r[1]));
+  TYPES[current].list.forEach(r => addPage(r[0], r[1]));
   markGuess('pages', false);
 }
 function markGuess(id, on){
   const el = $(id); if(!el) return;
   el.closest('.field')?.classList.toggle('guess', !!on);
 }
-loadPreset();
-loadPlan();
+function listRows(){
+  return [...document.querySelectorAll('#pages tbody tr')]
+    .map(tr => [tr.querySelector('.pn').value.trim(), tr.querySelector('.pp').value.trim()]);
+}
+function planRows(){
+  return [...document.querySelectorAll('#tasks tbody tr')]
+    .map(tr => [tr.querySelector('.tn').value.trim(), RESP[tr.querySelector('.tr').value], tr.querySelector('.tw').value.trim()]);
+}
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+// Switch the form to a contract type. Anything still at the previous type's
+// standard value is swapped for the new one; anything edited is left alone.
+function applyType(t, init){
+  const prev = TYPES[current], T = TYPES[t];
+  const std = {
+    list: init || same(listRows(), prev.list),
+    plan: init || same(planRows(), prev.plan),
+    duration: init || $('timeline.duration').value.trim() === prev.duration,
+    split: init || $('milestones').value === prev.split,
+    platform: init || $('scope.platform').value.trim() === prev.platform,
+  };
+  current = t;
+  $('engagement_type').value = t;
+  $('scope.inclusions').innerHTML = T.inclusions.map(n => '<option value="' + n + '">' + n + '</option>').join('');
+  $('list-label').textContent = T.list_label;
+  $('add-item').textContent = 'Add ' + T.item.toLowerCase();
+  $('devices-field').style.display = t === 'mobile_app' ? '' : 'none';
+  $('draftnote').style.display = T.draft ? '' : 'none';
+  $('scope.platform').placeholder = T.platform_hint;
+  $('project.name').placeholder = T.project_hint;
+  if(std.list) loadPreset();
+  else document.querySelectorAll('#pages tbody tr').forEach(tr => {
+    tr.querySelector('.pn').placeholder = T.item; tr.querySelector('.pp').placeholder = T.desc; });
+  if(std.plan) loadPlan();
+  if(std.duration) $('timeline.duration').value = T.duration;
+  if(std.split) $('milestones').value = T.split;
+  if(std.platform) $('scope.platform').value = T.platform;
+}
+applyType('website', true);
 $('atp.date').value = new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'});
 
 // ---- proposal upload
@@ -338,7 +389,13 @@ async function send(f){
   const j = await r.json();
   if(j.error){ drop.textContent = 'Could not read it: ' + j.error; return; }
   let filled = 0;
+  if(j.fields.engagement_type){
+    applyType(j.fields.engagement_type.value);
+    markGuess('engagement_type', true);
+    filled++;
+  }
   for(const [k,v] of Object.entries(j.fields)){
+    if(k === 'engagement_type') continue;
     if(k === 'scope.pages'){
       $('pages').querySelector('tbody').innerHTML = '';
       v.value.forEach(r => addPage(r[0], r[1]));
@@ -372,7 +429,8 @@ function notBuilt(errors, fields){
 $('go').onclick = async () => {
   const ids = ['client.legal_name','client.short_name','client.abn','client.address',
     'client.contact_name','atp.ref','atp.date','proposal.ref','proposal.date',
-    'project.name','scope.inclusions','scope.platform','scope.exclusions','hosting.note',
+    'engagement_type','project.name','scope.inclusions','scope.platform','scope.devices',
+    'scope.exclusions','hosting.note',
     'fee.standard','fee.discount','milestones','timeline.duration',
     'support.value','support.unit','support.price'];
   const data = {};
@@ -383,7 +441,8 @@ $('go').onclick = async () => {
   const half = rows.filter(tr => !tr.querySelector('.pn').value.trim() !== !tr.querySelector('.pp').value.trim());
   if(half.length){
     half.forEach(tr => tr.classList.add('bad'));
-    return notBuilt(['Every page needs a name and a purpose - ' + half.length
+    return notBuilt(['Every ' + TYPES[current].item.toLowerCase() + ' needs a name and a '
+                     + TYPES[current].desc.toLowerCase() + ' - ' + half.length
                      + (half.length === 1 ? ' row is' : ' rows are') + ' incomplete'], []);
   }
   data.pages = rows
@@ -421,8 +480,10 @@ async function build(data){
   const name = (r.headers.get('X-Filename') || 'ATP.docx');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = name; a.click();
-  $('status').innerHTML = '<span class="ok">Built ' + name
-    + ' — downloaded. Open it and read it before sending.</span>';
+  $('status').innerHTML = r.headers.get('X-Draft')
+    ? '<div class="note"><strong>Built ' + name + ' as a DRAFT for legal review.</strong> '
+      + 'It is marked NOT FOR ISSUE on every page. Do not send it to a client.</div>'
+    : '<span class="ok">Built ' + name + ' — downloaded. Open it and read it before sending.</span>';
   const rec = r.headers.get('X-Record') || '';
   const bad = rec.startsWith('FAILED');
   if (rec) $('status').innerHTML += '<div class="' + (bad ? 'note' : '') + '"'
@@ -491,7 +552,7 @@ LABELS = {
     "client.abn": "ABN", "client.address": "Address", "client.contact_name": "Contact person",
     "atp.ref": "ATP reference", "atp.date": "ATP date", "proposal.ref": "Proposal reference",
     "proposal.date": "Proposal date", "project.name": "Project name", "scope.platform": "Platform",
-    "timeline.duration": "Duration",
+    "timeline.duration": "Duration", "scope.devices": "Devices and operating systems",
 }
 
 
@@ -502,6 +563,10 @@ def friendly(err):
         return f"{LABELS[m.group(1)]} is empty", [m.group(1)]
     if "scope.pages is empty" in err:
         return "Add at least one page, with its purpose", []
+    if "scope.features is empty" in err:
+        return "Add at least one feature, with its description", []
+    if "is not a" in err and "preset" in err:
+        return "The 'What's included' list does not match the contract type - pick one for this type", ["scope.inclusions"]
     if "discount exceeds" in err:
         return "The discount is more than the standard price", ["fee.standard", "fee.discount"]
     if "price is $0" in err:
@@ -523,16 +588,45 @@ DEFAULT_SPLIT = "milestones.20-40-40"
 LOW_PRICE = 500      # below this the form asks before building; see build_in()
 
 
+NUM_WORDS = {6: "Six", 7: "Seven", 8: "Eight", 9: "Nine", 10: "Ten", 11: "Eleven", 12: "Twelve",
+             13: "Thirteen", 14: "Fourteen", 15: "Fifteen", 16: "Sixteen", 18: "Eighteen", 20: "Twenty"}
+DEFAULT_SPLITS = {"website": DEFAULT_SPLIT, "web_app": "milestones.20-30-30-20",
+                  "mobile_app": "milestones.20-30-30-20"}
+TYPE_WORDS = {  # list label, item, description, platform default and hint, project name hint
+    "website":    ("Pages", "Page", "Purpose", "WordPress", "e.g. WordPress", "e.g. Acme website"),
+    "web_app":    ("Features", "Feature", "Description", "", "e.g. Next.js and React", "e.g. Acme client portal"),
+    "mobile_app": ("Features", "Feature", "Description", "", "e.g. React Native", "e.g. Acme mobile app"),
+}
+
+
+def type_data():
+    """Everything the form switches when the contract type changes, read from presets/."""
+    out = {}
+    for t in builder.TYPES:
+        label, item, desc, platform, platform_hint, project_hint = TYPE_WORDS[t]
+        plan = preset_rows(presets("workplan", t)[0])
+        weeks = max(builder.weeks_in(r[-1]) for r in plan)
+        out[t] = {
+            "inclusions": presets("inclusions", t),
+            "list": preset_rows(presets(builder.SCOPE_LIST[t], t)[0]),
+            "plan": plan,
+            "duration": f"{NUM_WORDS.get(weeks, weeks)} weeks",
+            "split": DEFAULT_SPLITS[t],
+            "platform": platform, "platform_hint": platform_hint, "project_hint": project_hint,
+            "list_label": label, "item": item, "desc": desc,
+            "draft": t not in builder.REVIEWED,
+        }
+    return out
+
+
 def render_page():
     def opts(names, selected=None):
         return "".join(f'<option value="{html.escape(n)}"{" selected" if n == selected else ""}>'
                        f'{html.escape(n)}</option>' for n in names)
     # The form issues websites only: web app and mobile app clauses are still drafts.
     return (PAGE
-            .replace("__INCLUSIONS__", opts(presets("inclusions", "website")))
             .replace("__MILESTONES__", opts(presets("milestones"), DEFAULT_SPLIT))
-            .replace("__STDPLAN__", json.dumps(preset_rows(presets("workplan", "website")[0])))
-            .replace("__STDPAGES__", json.dumps(preset_rows(presets("pages", "website")[0]))))
+            .replace("__TYPES__", json.dumps(type_data())))
 
 
 # --------------------------------------------------------------------------- server
@@ -592,17 +686,21 @@ class Handler(BaseHTTPRequestHandler):
             raw = re.sub(r"[$,]", "", str(d.get(key, "")).strip())
             return float(raw) if raw else default
 
+        etype = d.get("engagement_type") or "website"
+        if etype not in builder.TYPES:
+            return self._send(200, json.dumps({"errors": [f"unknown contract type '{etype}'"]}))
         try:
             eng = {
                 "jurisdiction": "AU",
-                "engagement_type": "website",
+                "engagement_type": etype,
                 "atp": {"date": d.get("atp.date", ""), "ref": d.get("atp.ref", "")},
                 "proposal": {"ref": d.get("proposal.ref", ""), "date": d.get("proposal.date", "")},
                 "client": {k: d.get(f"client.{k}", "") for k in
                            ("legal_name", "abn", "address", "short_name", "contact_name")},
+                # a website lists pages in 2.2, an app lists features
                 "scope": {"inclusions": f'preset:{d.get("scope.inclusions")}',
-                          "pages": d.get("pages") or [],
-                          "platform": d.get("scope.platform") or "WordPress"},
+                          builder.SCOPE_LIST[etype]: d.get("pages") or [],
+                          "platform": d.get("scope.platform") or ("WordPress" if etype == "website" else "")},
                 "hosting": {"note": d.get("hosting.note", "")},
                 "fee": {"standard": num("fee.standard"), "discount": num("fee.discount")},
                 "milestones": f'preset:{d.get("milestones")}',
@@ -615,6 +713,8 @@ class Handler(BaseHTTPRequestHandler):
             }
             if d.get("scope.exclusions"):
                 eng["scope"]["exclusions"] = d["scope.exclusions"]
+            if etype == "mobile_app":
+                eng["scope"]["devices"] = d.get("scope.devices", "")
         except Exception as e:
             return self._send(200, json.dumps({"errors": [f"could not read the form: {e}"]}))
 
@@ -651,15 +751,17 @@ class Handler(BaseHTTPRequestHandler):
                            f"goes back to the form.",
                 "fields": ["fee.standard"]}))
 
-
-        name = f"ATP-{re.sub(r'[^A-Za-z0-9]+', '-', eng['client']['short_name'] or 'Client')}.docx"
+        # App terms are unreviewed: build them as marked drafts, never as issuable contracts.
+        draft = eng["engagement_type"] not in builder.REVIEWED
+        name = (f"ATP-{'DRAFT-' if draft else ''}"
+                f"{re.sub(r'[^A-Za-z0-9]+', '-', eng['client']['short_name'] or 'Client')}.docx")
         out = os.path.join(tmpdir, name)
         # build() prints its report; capturing stdout is process-wide, so one build at a time
         with BUILD_LOCK:
             buf, real = io.StringIO(), sys.stdout
             sys.stdout = buf
             try:
-                builder.build(path, out)
+                builder.build(path, out, draft=draft)
             except SystemExit:
                 sys.stdout = real
                 errs = [l.strip(" -") for l in buf.getvalue().splitlines() if l.strip().startswith("-")]
@@ -670,8 +772,11 @@ class Handler(BaseHTTPRequestHandler):
             finally:
                 sys.stdout = real
 
-        # It built, so record what was issued.
-        recorded, record_msg = record_engagement(eng, slug)
+        # It built, so record what was issued. A draft is not issued, so it is not recorded.
+        if draft:
+            recorded, record_msg = True, "draft for legal review - not recorded, because drafts are not issued"
+        else:
+            recorded, record_msg = record_engagement(eng, slug)
         print(f"  record: {record_msg}")
 
         data = open(out, "rb").read()
@@ -679,6 +784,7 @@ class Handler(BaseHTTPRequestHandler):
                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                    {"X-Filename": os.path.basename(out),
                     "X-Record": ("ok " if recorded else "FAILED ") + record_msg,
+                    **({"X-Draft": "1"} if draft else {}),
                     "Content-Disposition": f'attachment; filename="{os.path.basename(out)}"'})
 
 
