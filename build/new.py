@@ -144,6 +144,10 @@ def main():
         sys.exit(f"{RED}discount exceeds the standard price{RESET}")
     if standard - discount <= 0:
         sys.exit(f"{RED}the price is $0 - start again with the standard price{RESET}")
+    if standard - discount < 500 and not yes(
+            f"The price is ${standard - discount:,.2f} excluding tax, which is unusually low "
+            f"for a build. Is that right?", default=False):
+        sys.exit(f"{RED}  nothing written - start again with the right price{RESET}")
     if discount:
         print(f"{DIM}  -> client pays {standard - discount:,.2f} excluding tax{RESET}")
     splits = presets("milestones")

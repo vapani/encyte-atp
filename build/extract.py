@@ -45,16 +45,22 @@ def _hi(v):  return {"value": v, "confidence": "high"}
 def _lo(v):  return {"value": v, "confidence": "low"}
 
 # Money as Encyte proposals write it: "$5,500", "AUD 4,850", "AUD $2,650".
-MONEY = r"(?:AUD\s*\$?|\$)\s?([\d,]+(?:\.\d{2})?)"
+# A thousands group may carry a stray space after the comma - '$ 8, 946' in the
+# Ciro's v1.1 proposal, left by a hand edit in Word - which used to read as $8.
+NUMBER = r"\d{1,3}(?:,\s?\d{3})+(?:\.\d{2})?|\d+(?:\.\d{2})?"
+MONEY = rf"(?:AUD\s*\$?|\$)\s?({NUMBER})"
+
+LOW_PRICE = 500      # below this, a build price read from a proposal is almost certainly a misread
+
 
 def _amount(s):
     try:
-        return float(s.replace(",", ""))
+        return float(re.sub(r"[,\s]", "", s))
     except ValueError:
         return None
 
 # After a label, an amount may carry no currency at all: "Standard price 5,500 + GST".
-LABELLED_MONEY = r"(?:(?:AUD\s*\$?|\$)\s?([\d,]+(?:\.\d{2})?)|\b(\d{1,3}(?:,\d{3})+|\d{3,})(?=\s*\+\s*GST|\s+discount))"
+LABELLED_MONEY = rf"(?:(?:AUD\s*\$?|\$)\s?({NUMBER})|\b(\d{{1,3}}(?:,\s?\d{{3}})+|\d{{3,}})(?=\s*\+\s*GST|\s+discount))"
 
 def _labelled(flat, *labels):
     """Amount following the first of `labels` that has one. Labels are tried in
@@ -271,6 +277,10 @@ def extract(path):
             out["fee.standard"] = _lo(max(amounts))
             notes.append("price is the largest dollar figure in the document - check it is the "
                          "build price excluding GST, not a total including GST")
+    price = out.get("fee.standard", {}).get("value")
+    if price is not None and price - out.get("fee.discount", {}).get("value", 0) < LOW_PRICE:
+        notes.append(f"the price read as {price:,.0f} is unusually low for a build - the figure may be "
+                     f"split or mistyped in the proposal, so enter it by hand")
     # An allowance inside the investment (plugins, licences) is an expense under
     # clause 5.0, which the ATP charges at cost on top of the fee.
     m = re.search(rf"([^\n]*allowance[^\n]*)\n?[^\n$\d]{{0,20}}?{MONEY}", flat, re.I)

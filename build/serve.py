@@ -400,11 +400,21 @@ $('go').onclick = async () => {
       .map(tr => [tr.querySelector('.tn').value.trim(), RESP[tr.querySelector('.tr').value],
                   tr.querySelector('.tw').value.trim()])
       .filter(r => r[0] && r[2]);
+  return build(data);
+};
+
+async function build(data){
   $('status').innerHTML = 'Building...';
   const r = await fetch('/build', {method:'POST', headers:{'Content-Type':'application/json'},
                                    body: JSON.stringify(data)});
   if(r.headers.get('Content-Type') === 'application/json'){
     const j = await r.json();
+    if(j.confirm){
+      if(!confirm(j.confirm))
+        return notBuilt(['Check the standard price and discount, then build again'], j.fields || []);
+      data.confirm_low_price = true;
+      return build(data);
+    }
     return notBuilt(j.errors, j.fields || []);
   }
   const blob = await r.blob();
@@ -419,7 +429,7 @@ $('go').onclick = async () => {
     + ' style="margin-top:8px;font-size:13px' + (bad ? '' : ';color:var(--mut)') + '">'
     + (bad ? '<strong>The engagement record did not save.</strong> ' : 'Record: ')
     + rec.replace(/^(ok|FAILED) /, '') + '</div>';
-};
+}
 </script></body></html>"""
 
 
@@ -510,6 +520,7 @@ def friendly(err):
 
 
 DEFAULT_SPLIT = "milestones.20-40-40"
+LOW_PRICE = 500      # below this the form asks before building; see build_in()
 
 
 def render_page():
@@ -611,11 +622,11 @@ class Handler(BaseHTTPRequestHandler):
         # half-filled engagement behind in engagements/
         tmpdir = tempfile.mkdtemp()
         try:
-            self.build_in(tmpdir, eng)
+            self.build_in(tmpdir, eng, confirmed_low=bool(d.get("confirm_low_price")))
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
 
-    def build_in(self, tmpdir, eng):
+    def build_in(self, tmpdir, eng, confirmed_low=False):
         slug = slugify(eng["client"]["short_name"])
         path = os.path.join(tmpdir, f"{slug}.json")
         json.dump(eng, open(path, "w"), indent=1, ensure_ascii=False)
@@ -629,6 +640,17 @@ class Handler(BaseHTTPRequestHandler):
         if problems:
             return self._send(200, json.dumps({"errors": [m for m, _ in problems],
                                                "fields": sorted({f for _, fs in problems for f in fs})}))
+
+        # Valid but implausible: a price this low is usually a misread or a typo
+        # ('$ 8, 946' read as $8). Ask, rather than refuse - a small job is possible.
+        total = eng["fee"]["standard"] - eng["fee"]["discount"]
+        if total < LOW_PRICE and not confirmed_low:
+            return self._send(200, json.dumps({
+                "confirm": f"The price is ${total:,.2f} excluding GST, which is unusually low for a "
+                           f"build. Is that right?\n\nOK builds the contract at this price. Cancel "
+                           f"goes back to the form.",
+                "fields": ["fee.standard"]}))
+
 
         name = f"ATP-{re.sub(r'[^A-Za-z0-9]+', '-', eng['client']['short_name'] or 'Client')}.docx"
         out = os.path.join(tmpdir, name)
