@@ -9,7 +9,7 @@
  },
  {
   "percent": 30,
-  "description": "30% when the complete build is ready for acceptance testing."
+  "description": "30% when the complete build is ready for user acceptance testing (UAT)."
  },
  {
   "percent": 20,

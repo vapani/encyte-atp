@@ -38,6 +38,8 @@ it fills in what it can find. It matches patterns, not meaning:
   states: *8 pages – Home, …*, *Page scope · 9 pages* with names below, or *Up to 8 core
   pages* with *A likely core set is …*. A shorter list goes in the notes instead of replacing
   the standard list. Purposes are left empty, because they are part of the contract's scope.
+  A *Store structure* list, as in the MILK proposal, is read with its subpages, and an item
+  written *Name (what it covers)* or *Name – what it covers* fills the purpose too.
 
 Checked against the NGA, REKT, both Smiles 4 Miles versions, Colombo Seven Gin and Ciro's
 proposals. Anything it guessed is **shaded**, and the notes above the form say what to check.
@@ -48,23 +50,36 @@ that the price is not $0, that the ABN passes its check digit, that dates read l
 *8 September 2026* and references like *26-NGA-WD-062*, and that no page is missing its
 purpose. Problems are listed in the form's own words, with the fields marked in red.
 
-**Choose the contract type first** - Website, Web app or Mobile app. It switches everything
-that depends on it:
+**Choose the contract type first** - Website, Web app, Mobile app, or Web and mobile app (one
+contract for a job with both, such as NVQ's "Mobile and Web Application"). It switches
+everything that depends on it:
 
 - *What's included*, the list in 2.2 (pages for a website, features for an app);
 - the platform, with no default for apps;
-- a *Devices and operating systems* field for a mobile app;
-- the standard timeline (8, 12 or 14 weeks), duration and payment split.
+- a *Devices and operating systems* field for a mobile app, or a web and mobile app;
+- the standard timeline (8, 12, 14 or 16 weeks), duration and payment split.
+
+**A website can include an online store.** Ticking *Includes an online store* adds the payment
+provider account to the items the client holds and pays for, an online store line to *What's
+included*, and clause 3.8 Online store: payments through the client's own Stripe, Square or
+PayPal account, card details held by the provider and never stored by the site, products,
+prices and terms of sale supplied by the client, and orders and refunds run by the client. By
+Asitha's decision (30 September 2026) it is issued now and reviewed with the rest later.
 
 Anything you've already edited stays when you switch. A proposal upload suggests the type:
 it picks *Web app* when the proposal talks about a platform, portal or dashboards far more
-than a website, and *Mobile app* when it keeps mentioning iOS, Android or the app stores.
-**Web app and mobile app contracts come out as drafts** (see below): marked *DRAFT FOR LEGAL
+than a website, *Mobile app* when it keeps mentioning iOS, Android or the app stores, and
+*Web and mobile app* when it describes a "mobile and web application".
+**App contracts of all three kinds come out as drafts** (see below): marked *DRAFT FOR LEGAL
 REVIEW – NOT FOR ISSUE* on every page, named `ATP-DRAFT-…`, and not recorded as issued
 engagements.
 
 **Pages are editable rows**, not a preset, because every project differs. They appear
-in the contract exactly as typed.
+in the contract exactly as typed. The **›** button makes a row a subpage of the page above
+it, and **‹** moves it back out. A subpage can have subpages of its own, two levels at most.
+In the contract a subpage is indented under its page and starts with an en dash. In the
+engagement file a row is `[name, purpose]`, and a subpage adds its level:
+`["Telecom", "", 1]`.
 
 **So is the timeline.** Section 3.1 starts as the standard eight-week plan. Rows can be
 edited, added or removed to match the proposal: a task, who is responsible (Encyte, the
@@ -148,7 +163,7 @@ Two things worth knowing about this repo:
 |---|---|---|
 | **Legal spine** — sections 4–14 | `template/atp-website.docx` | **No. Locked.** |
 | **Scope module** — section 2 | same file, token-driven | Shape is fixed, content varies |
-| **Jurisdiction pack** | `jurisdictions/AU.json` | Only when the entity/country changes |
+| **Jurisdiction pack** | `jurisdictions/AU.json`, `LK.json` | Only when the entity/country changes |
 | **Engagement data** | `engagements/*.json` | Every deal |
 
 The template is the NGA contract with its values replaced by `{{tokens}}`, so all
@@ -187,6 +202,7 @@ Acentura ATP — 30/40/30 in clause 2.3 and 40/20/20 in clause 4.0, because it w
 - discount cannot exceed the standard price
 - required fields present and non-empty
 - `scope.pages` non-empty
+- a subpage has a page above it, one level deeper at most, and no deeper than level 2
 - **no unreplaced `{{tokens}}` in the output**, including in headers and footers
 - **no em dashes** anywhere in the output. House style is the spaced en dash, and Word's
   autocorrect turns ` - ` into an em dash the moment anyone edits the template by hand
@@ -201,30 +217,35 @@ Acentura ATP — 30/40/30 in clause 2.3 and 40/20/20 in clause 4.0, because it w
 
 ## Web app and mobile app ATPs — drafted, not yet reviewed
 
-`engagement_type` accepts `website`, `web_app` and `mobile_app`. All three build from the
+`engagement_type` accepts `website`, `web_app`, `mobile_app` and `web_mobile_app`. All four build from the
 **same template**. An earlier plan was one template file per type. It was dropped because
 three copies of sections 4 to 14 would drift apart, which is the Acentura failure again.
 The type-specific wording sits in conditional blocks:
 
 ```
-{{?web_app|mobile_app}}  ...kept for either app type...  {{/web_app|mobile_app}}
+{{?web_app|mobile_app|web_mobile_app}}  ...kept for any app type...  {{/web_app|mobile_app|web_mobile_app}}
+{{?online_store}}  ...kept when the website has an online store...  {{/online_store}}
 ```
 
-A block names one or more types. A name that is not a known type fails the build, so a
-typo cannot silently drop a clause from every contract. Sections 4 to 14 have no blocks.
+A block names one or more types, or an option (`OPTIONS` in `build/build.py`). A name that is
+neither fails the build, so a typo cannot silently drop a clause from every contract. Sections
+4 to 14 have no blocks. The number of items the client holds and pays for in 2.3 is
+calculated (`{{held.count}}`: three, plus the app store accounts, plus the payment provider
+account), and 3.10 names the part that goes to the stores (`{{store_app}}`: "the app", or "the
+mobile app" in a web and mobile app).
 
-| Clause | Website | Web app | Mobile app |
-|---|---|---|---|
-| 2.2 | Pages included | Features included | Features included |
-| 2.3 held items | three | three | four (adds developer accounts) |
-| 2.3 support | browsers | browsers | `scope.devices` |
-| 2.3 results | search and traffic | security, performance; no promise of error-free software | same as web app |
-| 3.5 | – | defect severity: start within 1 / 3 business days | same |
-| 3.6 | – | written acceptance criteria per feature, agreed before development | same |
-| 3.7 Handover | platform admin, site transfer | admin area, repository transfer, documentation | same |
-| 3.8 Environments and source code | – | ours until handover; production in client's accounts; permissive licences only | same |
-| 3.9 Third-party services and platform changes | – | provider changes are a change; new OS/browser versions are not a defect | same |
-| 3.10 App store release | – | – | client's developer accounts; rejection split by fault; acceptance does not wait for store review |
+| Clause | Website | Web app | Mobile app | Web and mobile app |
+|---|---|---|---|---|
+| 2.2 | Pages included | Features included | Features included | Features included |
+| 2.3 held items | three (four with a store) | three | four (adds developer accounts) | four |
+| 2.3 support | browsers | browsers | `scope.devices` | browsers for the web app, `scope.devices` for the mobile app |
+| 2.3 results | search and traffic | security, performance; no promise of error-free software | same as web app | same |
+| 3.5 | – | defect severity: start within 1 / 3 business days | same | same |
+| 3.6 | Acceptance | User acceptance testing (UAT): criteria per feature agreed before development, the client's testers and data, a separate testing environment; only critical and major defects hold up sign-off | same | same |
+| 3.7 Handover | platform admin, site transfer | admin area, repository transfer, documentation | same | same |
+| 3.8 | Online store, when ticked | Environments and source code: ours until handover; production in client's accounts; permissive licences only | same | same |
+| 3.9 Third-party services and platform changes | – | provider changes are a change; new OS/browser versions are not a defect | same | same |
+| 3.10 App store release | – | – | client's developer accounts; rejection split by fault; acceptance does not wait for store review | same, for the mobile app |
 
 New clauses are numbered after 3.7, so no existing clause number or cross-reference moves.
 
@@ -245,9 +266,11 @@ normally, with no other change.
 
 **Engagement data for apps.** `scope.features` replaces `scope.pages`, with the same
 `[name, description]` rows. `scope.platform` has no default, because the stack is a decision
-for every project. `mobile_app` also requires `scope.devices`, which is written into 2.3 as
-typed, for example *"iPhones running iOS 17 or later and Android phones running Android 10
-or later"*. See `engagements/sample-web-app.json` and `sample-mobile-app.json`.
+for every project. `mobile_app` and `web_mobile_app` also require `scope.devices`, which is
+written into 2.3 as typed, for example *"iPhones running iOS 17 or later and Android phones
+running Android 10 or later"*. See `engagements/sample-web-app.json`, `sample-mobile-app.json`
+and `sample-web-mobile-app.json`. A website's online store is `"online_store": true` in
+`scope`; the build refuses it on any other type.
 
 **Presets are named for their type.** Examples are `inclusions.web-app`,
 `workplan.mobile-app-14week` and `features.mobile-app-starter`. The build rejects a scope or
@@ -276,8 +299,44 @@ work-plan preset that belongs to another type. Milestone splits are shared.
 
 Copy `jurisdictions/AU.json`. The pack moves as a set: provider entity, governing law,
 dispute body, interest benchmark, currency and tax, support hours, and the statutes
-referenced in 6.1, 8.0, 9.0 and 10.0. A Sri Lankan pack also needs PDPA No. 9 of 2022
-and IP Act No. 36 of 2003 in place of the Australian statutes.
+referenced in 6.1, 8.0, 9.0 and 10.0.
+
+A country whose contract reads differently gets its own template, named in the pack.
+These pack settings are all optional, and Australia uses none of them:
+
+| Setting | What it does |
+|---|---|
+| `template` | the template file in `template/`, instead of `atp-website.docx` |
+| `reviewed` | the types that country can issue; any other type builds only with `--draft` |
+| `client_id` | the client field the build requires, `reg_no` instead of `abn` |
+| `currency_symbol` | put in front of every amount, e.g. `LKR ` |
+| `store_inclusion` | the online store line added to 2.1 |
+| `defaults` | engagement values the country fills in when the engagement leaves them out |
+
+## Sri Lankan contracts
+
+`jurisdictions/LK.json` builds from `template/atp-website-lk.docx`: the revised Acentura
+agreement, in formal language (the Client, the Provider), with sections 1.0 to 18.0
+and a signing block with two witnesses. Amounts are in LKR, and the Provider is registered
+for SSCL, so 2.5% is added and shown separately. There is no GST or VAT.
+
+- **Website only so far**, with the online store option (3.6, with PayHere, WebXPay or a
+  bank as the gateway, and up to `scope.store_products` products entered, 50 by default).
+  The app types follow once the website wording is approved.
+- **Draft until approved.** `reviewed` is empty, so every Sri Lankan build is marked
+  *DRAFT FOR LEGAL REVIEW – NOT FOR ISSUE*. Adding `"website"` to it is the approval.
+- **Placeholders.** A fact still to come is written `[... – to confirm]`, such as the body
+  in 18.4 that appoints a mediator. The build highlights each one and lists it, and
+  refuses to issue a contract that still has one.
+- **Presets** live in `presets/lk/` and are named `preset:lk/...`: the inclusions, the
+  eight-week plan (5 business days of testing in week 7) and the 30-40-30, 40-30-30 and
+  40-40-20 splits. The final payment is always on acceptance under 3.4.
+- **The sample** is `engagements/sample-lk-website.json`, with subpages in 2.2.
+- **Engagement fields** differ from Australia's: `client.reg_no` replaces
+  `client.abn`, and `support.plan` is not used, because 4.1 quotes ongoing support
+  separately.
+- **Not yet in the form or the wizard.** Build from an engagement file:
+  `python3 build/build.py engagements/sample-lk-website.json out.docx --draft`
 
 
 ## Known gaps — deliberately not in the template

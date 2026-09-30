@@ -151,6 +151,9 @@ def _contract_type(text):
     mobile = count(r"\b(?:ios|android|app store|google play|mobile app)\b")
     webapp = count(r"\b(?:web app|web application|platform|portal|dashboards?|saas)\b")
     website = count(r"\bwebsites?\b")
+    both = re.search(r"\b(?:mobile and web|web and mobile) app(?:lication)?s?\b", text, re.I)
+    if both:
+        return "web_mobile_app", f"it describes a '{both.group(0)}'"
     if mobile >= 3 and mobile > website:
         return "mobile_app", f"it mentions iOS, Android or the app stores {mobile} times"
     if webapp >= 10 and webapp > 2 * website:
@@ -160,6 +163,76 @@ def _contract_type(text):
         return "website", None
     return None, None
 
+
+STRUCTURE_LABEL = re.compile(r"^(?:(?:store|site|website|page)\s+(?:structure|map)|sitemap|pages(?:\s+included)?)$", re.I)
+
+def _split_item(t):
+    """'Collection pages (migrated from Shopify)' or 'Blog — book recommendations'
+    -> [name, purpose]; a bare name gets an empty purpose for you to write."""
+    t = t.strip(" .;")
+    m = re.match(r"^(.*?)\s*\((.+)\)$", t) or re.match(r"^(.*?)\s+[—–-]\s+(.+)$", t)
+    if not m:
+        return [t, ""]
+    purpose = m.group(2).strip()
+    return [m.group(1).strip(), purpose[:1].upper() + purpose[1:]]
+
+def _structure_list(path):
+    """Pages listed beside a 'Store structure' / 'Site map' / 'Pages' label, as
+    (level, text) - level 1 for an indented line, which is how subpages appear.
+
+    MILK's scope slide is a two-column table: labels on the left, what each covers
+    on the right. As plain text the next label runs straight on from the last
+    page, so this reads positions: a right-hand line belongs to the nearest label
+    at or just below it (a label sits level with the middle of its lines).
+    """
+    ext = os.path.splitext(path)[1].lower()
+    if ext == ".docx":
+        from docx import Document
+        for table in Document(path).tables:
+            for row in table.rows:
+                cells = row.cells
+                if len(cells) >= 2 and STRUCTURE_LABEL.match(cells[0].text.strip()):
+                    items = []
+                    for pgh in cells[1].paragraphs:
+                        t = pgh.text.strip()
+                        if not t:
+                            continue
+                        indent = pgh.paragraph_format.left_indent
+                        level = 1 if (indent and indent > 0) or re.match(r"^[–—\-•]\s", t) else 0
+                        items.append((level, re.sub(r"^[–—\-•]\s+", "", t)))
+                    if len(items) >= 2:
+                        return items
+        return []
+    if ext != ".pdf":
+        return []
+    import fitz
+    with fitz.open(path) as doc:
+        for page in doc:
+            lines = []
+            for b in page.get_text("dict")["blocks"]:
+                for l in b.get("lines", []):
+                    t = "".join(sp["text"] for sp in l["spans"]).strip()
+                    if t:
+                        lines.append((l["bbox"][0], l["bbox"][1], l["bbox"][2], t))
+            for lx0, ly0, lx1, lt in lines:
+                if not STRUCTURE_LABEL.match(lt):
+                    continue
+                labels = sorted(y for x0, y, x1, t in lines if abs(x0 - lx0) < 8)   # the left column
+                right = sorted((y, x0, t) for x0, y, x1, t in lines
+                               if x0 > lx1 + 40 and x0 < page.rect.width * 0.9)
+                mine = [(y, x0, t) for y, x0, t in right
+                        if max([ly for ly in labels if ly <= y + 15] or [None]) == ly0]
+                if len(mine) < 2:
+                    continue
+                left = min(x0 for _, x0, _ in mine)
+                items = []
+                for y, x0, t in mine:
+                    if items and t[:1].islower():               # a wrapped line continues the one above
+                        items[-1] = (items[-1][0], items[-1][1] + " " + t)
+                    else:
+                        items.append((1 if x0 > left + 8 else 0, t))
+                return items
+    return []
 
 def _prepared_for(text):
     """The client named on the cover by 'Prepared for', joined into one line.
@@ -221,7 +294,8 @@ def extract(path):
     if kind:
         out["engagement_type"] = _lo(kind)
         if why:
-            label = {"web_app": "a web app", "mobile_app": "a mobile app"}[kind]
+            label = {"web_app": "a web app", "mobile_app": "a mobile app",
+                     "web_mobile_app": "a web and mobile app"}[kind]
             notes.append(f"this looks like {label} proposal - {why} - so the contract type is set to "
                          f"{label[2:] if label.startswith('a ') else label}. Check it, and note that app "
                          f"contracts are drafts until the app terms are legally reviewed")
@@ -343,8 +417,17 @@ def extract(path):
     # --- pages. Only a list that matches the count the proposal states fills the
     # page rows; anything less is reported in the notes. Guessing rows from free
     # text ("Stated twice", sentence fragments) used to replace the standard list.
-    names, stated = _page_list(text)
-    if names and stated and len(names) == stated:
+    # A list under a 'Store structure' / 'Site map' / 'Pages' label is read first:
+    # the label says what it is, so no stated count is needed to trust it.
+    structured = _structure_list(path)
+    names, stated = ([], None) if structured else _page_list(text)
+    if structured:
+        out["scope.pages"] = _lo([_split_item(t) + ([level] if level else []) for level, t in structured])
+        subs = sum(1 for level, _ in structured if level)
+        notes.append(f"{len(structured)} pages read from the proposal's page list"
+                     + (f", {subs} of them indented like subpages" if subs else "")
+                     + " - write a purpose wherever one is missing")
+    elif names and stated and len(names) == stated:
         out["scope.pages"] = _lo([[n, ""] for n in names])
         notes.append(f"{stated} pages read from the proposal - write a purpose for each, "
                      f"since the purpose column is part of the contract's scope")

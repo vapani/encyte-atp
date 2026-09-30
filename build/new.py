@@ -107,7 +107,10 @@ def main():
     print(f"\n{BOLD}New engagement{RESET}")
     print(f"{DIM}Answers become engagements/<name>.json. Enter accepts the value in brackets.{RESET}")
 
-    jurs = sorted(os.path.basename(p)[:-5] for p in glob.glob(f"{ROOT}/jurisdictions/*.json"))
+    # The wizard asks for an ABN and offers the Australian presets, so it leaves out
+    # packs with their own template (Sri Lanka), which are built from an engagement file.
+    jurs = sorted(os.path.basename(p)[:-5] for p in glob.glob(f"{ROOT}/jurisdictions/*.json")
+                  if "template" not in json.load(open(p)))
     jur = jurs[0] if len(jurs) == 1 else pick("Jurisdiction", jurs)
     provider = json.load(open(f"{ROOT}/jurisdictions/{jur}.json"))["provider"]
     print(f"{DIM}  Provider: {provider['legal_name']} (from jurisdictions/{jur}.json){RESET}")

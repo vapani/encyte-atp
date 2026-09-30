@@ -15,24 +15,24 @@
   "Week 1"
  ],
  [
-  "User flows and wireframes, for review",
+  "User flows and wireframes for web and mobile, for review",
   "{{provider.short_name}}",
   "Weeks 2–3"
  ],
  [
   "Wireframe feedback",
   "{{client.short_name}}",
-  "Week 3"
+  "Week 4"
  ],
  [
-  "Visual design of the key screens, for review",
+  "Visual design of the key web and mobile screens, for review",
   "{{provider.short_name}}",
   "Weeks 4–5"
  ],
  [
   "Design freeze – you approve the look",
   "{{client.short_name}}",
-  "Week 5"
+  "Week 6"
  ],
  [
   "Acceptance criteria agreed for each feature",
@@ -40,38 +40,38 @@
   "Week 6"
  ],
  [
-  "Development, with a test build every two weeks",
+  "Development, with a testing release every two weeks",
   "{{provider.short_name}}",
-  "Weeks 6–11"
+  "Weeks 7–13"
  ],
  [
-  "Feedback on each test build",
+  "Feedback on each testing release",
   "{{client.short_name}}",
-  "Weeks 7–11"
+  "Weeks 8–13"
  ],
  [
   "Store listing text, screenshots and privacy details approved",
   "{{client.short_name}}",
-  "Week 11"
+  "Week 12"
  ],
  [
   "Complete build ready for user acceptance testing (UAT)",
   "{{provider.short_name}}",
-  "Week 12"
+  "Week 13"
  ],
  [
-  "UAT on your own devices, then sign-off",
+  "UAT of the web app and on your own devices, then sign-off",
   "{{client.short_name}}",
-  "Weeks 13–14"
+  "Weeks 14–15"
  ],
  [
-  "Submission to the App Store and Google Play",
+  "Web app go-live and submission to the App Store and Google Play",
   "{{provider.short_name}}",
-  "Week 14"
+  "Week 16"
  ],
  [
   "Handover session, documentation and administrator access",
   "{{provider.short_name}}",
-  "Week 14"
+  "Week 16"
  ]
 ]

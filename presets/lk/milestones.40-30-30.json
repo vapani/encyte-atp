@@ -1,0 +1,14 @@
+[
+ {
+  "percent": 40,
+  "description": "40% of the total project fee, due prior to the commencement of development."
+ },
+ {
+  "percent": 30,
+  "description": "30% of the total project fee upon completion of the development."
+ },
+ {
+  "percent": 30,
+  "description": "30% of the total project fee upon acceptance of the {{deliverable}} under section 3.4."
+ }
+]

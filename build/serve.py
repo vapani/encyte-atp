@@ -177,6 +177,8 @@ button.link{border:none;background:none;color:var(--err);padding:4px 8px;font-si
 table{width:100%;border-collapse:collapse}
 td{padding:4px 4px 4px 0;vertical-align:top}
 td.act{width:36px}
+td.lvl{width:64px;white-space:nowrap}
+button.lv{padding:5px 8px;font-size:13px;line-height:1;margin-right:2px}
 #tasks th{text-align:left;font-size:12px;font-weight:500;color:var(--mut);padding:0 4px 4px 0}
 #tasks .resp{width:170px}
 #tasks .when{width:130px}
@@ -205,7 +207,8 @@ td.act{width:36px}
 <div class="card"><h2>What are we building?</h2><div class="grid">
   <div class="field"><label>Contract type</label><select id="engagement_type" onchange="applyType(this.value)">
     <option value="website">Website</option><option value="web_app">Web app</option>
-    <option value="mobile_app">Mobile app</option></select><div class="badge">check this</div></div>
+    <option value="mobile_app">Mobile app</option>
+    <option value="web_mobile_app">Web and mobile app</option></select><div class="badge">check this</div></div>
 </div>
 <div id="draftnote" class="note" style="display:none"><strong>Draft only.</strong> The web app and
   mobile app terms have not been legally reviewed yet. This contract will be marked
@@ -231,6 +234,10 @@ td.act{width:36px}
 <div class="card"><h2>Scope</h2><div class="grid">
   <div class="field"><label>What's included</label><select id="scope.inclusions"></select></div>
   <div class="field"><label>Platform</label><input id="scope.platform" value="WordPress"><div class="badge">check this</div></div>
+  <div class="field full" id="store-field"><label style="font-weight:400">
+    <input type="checkbox" id="online_store" style="width:auto;margin:0 8px 0 0;vertical-align:-2px">
+    <strong>Includes an online store</strong> &ndash; payments through Stripe, Square or PayPal. Adds the
+    payment provider account and an online store clause (3.8).</label></div>
   <div class="field full" id="devices-field" style="display:none"><label>Devices and operating systems</label>
     <input id="scope.devices" placeholder="e.g. iPhones running iOS 17 or later and Android phones running Android 10 or later"><div class="badge">check this</div></div>
   <div class="field full"><label>What is <em>not</em> included</label>
@@ -313,15 +320,31 @@ function planEnd(){
   $('planend').textContent = weeks.length ? 'The plan runs to week ' + Math.max(...weeks) + '.' : '';
 }
 
-function addPage(name, purpose){
+// A row's level: 0 a page, 1 a subpage of the row above, 2 a subpage of that.
+function setLevel(tr, level){
+  tr.dataset.level = level;
+  tr.querySelector('.pn').style.marginLeft = (level * 22) + 'px';
+  tr.querySelector('.pn').style.width = 'calc(100% - ' + (level * 22) + 'px)';
+  tr.querySelector('.pn').title = level ? (level === 1 ? 'Subpage' : 'Subpage of a subpage') : '';
+}
+function addPage(name, purpose, level){
   const tr = document.createElement('tr');
   tr.innerHTML = '<td><input class="pn" placeholder="' + TYPES[current].item + '"></td>'
                + '<td><input class="pp" placeholder="' + TYPES[current].desc + '"></td>'
+               + '<td class="lvl"><button type="button" class="lv out" title="Move out a level">&lsaquo;</button>'
+               + '<button type="button" class="lv in" title="Make it a subpage of the row above">&rsaquo;</button></td>'
                + '<td class="act"><button type="button" class="link">&times;</button></td>';
   tr.querySelector('.pn').value = name || '';
   tr.querySelector('.pp').value = purpose || '';
-  tr.querySelector('button').onclick = () => tr.remove();
+  tr.querySelector('.link').onclick = () => tr.remove();
+  tr.querySelector('.in').onclick = () => {           // one level deeper than the row above, at most
+    const above = tr.previousElementSibling;
+    const cap = above ? Math.min(2, Number(above.dataset.level || 0) + 1) : 0;
+    setLevel(tr, Math.min(cap, Number(tr.dataset.level || 0) + 1));
+  };
+  tr.querySelector('.out').onclick = () => setLevel(tr, Math.max(0, Number(tr.dataset.level || 0) - 1));
   $('pages').querySelector('tbody').appendChild(tr);
+  setLevel(tr, level || 0);
 }
 function loadPreset(){
   $('pages').querySelector('tbody').innerHTML = '';
@@ -358,7 +381,9 @@ function applyType(t, init){
   $('scope.inclusions').innerHTML = T.inclusions.map(n => '<option value="' + n + '">' + n + '</option>').join('');
   $('list-label').textContent = T.list_label;
   $('add-item').textContent = 'Add ' + T.item.toLowerCase();
-  $('devices-field').style.display = t === 'mobile_app' ? '' : 'none';
+  $('devices-field').style.display = (t === 'mobile_app' || t === 'web_mobile_app') ? '' : 'none';
+  $('store-field').style.display = t === 'website' ? '' : 'none';     // stores are a website option
+  if(t !== 'website') $('online_store').checked = false;
   $('draftnote').style.display = T.draft ? '' : 'none';
   $('scope.platform').placeholder = T.platform_hint;
   $('project.name').placeholder = T.project_hint;
@@ -398,7 +423,7 @@ async function send(f){
     if(k === 'engagement_type') continue;
     if(k === 'scope.pages'){
       $('pages').querySelector('tbody').innerHTML = '';
-      v.value.forEach(r => addPage(r[0], r[1]));
+      v.value.forEach(r => addPage(r[0], r[1], r[2] || 0));
       // read from the proposal, so shade them like any other guess
       document.querySelectorAll('#pages tbody tr').forEach(tr => tr.classList.add('guess'));
       filled++; continue;
@@ -445,8 +470,10 @@ $('go').onclick = async () => {
                      + TYPES[current].desc.toLowerCase() + ' - ' + half.length
                      + (half.length === 1 ? ' row is' : ' rows are') + ' incomplete'], []);
   }
+  data.online_store = $('online_store').checked;
   data.pages = rows
-      .map(tr => [tr.querySelector('.pn').value.trim(), tr.querySelector('.pp').value.trim()])
+      .map(tr => [tr.querySelector('.pn').value.trim(), tr.querySelector('.pp').value.trim(),
+                  Number(tr.dataset.level || 0)])
       .filter(r => r[0] && r[1]);
   const trows = [...document.querySelectorAll('#tasks tbody tr')];
   const thalf = trows.filter(tr => !tr.querySelector('.tn').value.trim() !== !tr.querySelector('.tw').value.trim());
@@ -591,11 +618,13 @@ LOW_PRICE = 500      # below this the form asks before building; see build_in()
 NUM_WORDS = {6: "Six", 7: "Seven", 8: "Eight", 9: "Nine", 10: "Ten", 11: "Eleven", 12: "Twelve",
              13: "Thirteen", 14: "Fourteen", 15: "Fifteen", 16: "Sixteen", 18: "Eighteen", 20: "Twenty"}
 DEFAULT_SPLITS = {"website": DEFAULT_SPLIT, "web_app": "milestones.20-30-30-20",
-                  "mobile_app": "milestones.20-30-30-20"}
+                  "mobile_app": "milestones.20-30-30-20", "web_mobile_app": "milestones.20-30-30-20"}
 TYPE_WORDS = {  # list label, item, description, platform default and hint, project name hint
     "website":    ("Pages", "Page", "Purpose", "WordPress", "e.g. WordPress", "e.g. Acme website"),
     "web_app":    ("Features", "Feature", "Description", "", "e.g. Next.js and React", "e.g. Acme client portal"),
     "mobile_app": ("Features", "Feature", "Description", "", "e.g. React Native", "e.g. Acme mobile app"),
+    "web_mobile_app": ("Features", "Feature", "Description", "", "e.g. Next.js and React Native",
+                       "e.g. Acme web and mobile app"),
 }
 
 
@@ -713,8 +742,10 @@ class Handler(BaseHTTPRequestHandler):
             }
             if d.get("scope.exclusions"):
                 eng["scope"]["exclusions"] = d["scope.exclusions"]
-            if etype == "mobile_app":
+            if etype in builder.MOBILE_TYPES:
                 eng["scope"]["devices"] = d.get("scope.devices", "")
+            if etype == "website" and d.get("online_store"):
+                eng["scope"]["online_store"] = True
         except Exception as e:
             return self._send(200, json.dumps({"errors": [f"could not read the form: {e}"]}))
 

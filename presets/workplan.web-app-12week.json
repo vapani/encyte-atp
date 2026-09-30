@@ -50,12 +50,12 @@
   "Week 9"
  ],
  [
-  "Complete build ready for acceptance testing",
+  "Complete build ready for user acceptance testing (UAT)",
   "{{provider.short_name}}",
   "Week 10"
  ],
  [
-  "Acceptance testing, then sign-off",
+  "User acceptance testing (UAT), then sign-off",
   "{{client.short_name}}",
   "Weeks 11–12"
  ],

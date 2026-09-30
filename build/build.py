@@ -2,14 +2,15 @@
 """Build an ATP from a jurisdiction pack + an engagement file."""
 import docx, json, sys, re, copy, os
 from docx.oxml.ns import qn
-from docx.shared import RGBColor
+from docx.shared import RGBColor, Twips
+from docx.enum.text import WD_COLOR_INDEX
 from decimal import Decimal, ROUND_HALF_UP
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-def money(v):
+def money(v, symbol="$"):
     q = Decimal(str(v)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    return f"${q:,.2f}"
+    return f"{symbol}{q:,.2f}"
 
 def resolve(v):
     """A string like 'preset:milestones.20-40-40' loads presets/<name>.json."""
@@ -19,12 +20,25 @@ def resolve(v):
 
 # Engagement types the one template can build. The type-specific wording lives in
 # {{?type}} blocks inside template/atp-website.docx; sections 4 to 14 are shared.
-TYPES = ("website", "web_app", "mobile_app")
+TYPES = ("website", "web_app", "mobile_app", "web_mobile_app")
+
+# Options that switch on extra clauses within a type, set in the engagement's scope
+# ("online_store": true). Block names may be a type or an option: {{?online_store}}.
+OPTIONS = {"online_store": ("website",)}      # option -> the types it applies to
 
 # Types whose wording has been legally reviewed and can be issued. Anything else
 # builds only with --draft, and the header says so on every page. Adding a type
 # here is the record that its clauses were reviewed - do it in its own commit.
+# A jurisdiction pack with its own template lists its own ("reviewed": [...]).
 REVIEWED = {"website"}
+
+def reviewed(jur):
+    return set(jur.get("reviewed", REVIEWED))
+
+# A placeholder the template or the jurisdiction pack leaves for a fact still to
+# come, such as "[registration number – to confirm]". It is highlighted in the
+# output, and a contract carrying one cannot be issued.
+PLACEHOLDER = re.compile(r"\[[^\]]*to confirm[^\]]*\]")
 DRAFT_MARK = "DRAFT FOR LEGAL REVIEW \u2013 NOT FOR ISSUE  |  "
 
 # The noun the agreement uses for the thing being delivered. Override per engagement
@@ -33,6 +47,7 @@ DELIVERABLE = {
     "website":    "website",
     "web_app":    "web app",
     "mobile_app": "app",
+    "web_mobile_app": "web and mobile app",
     "brand":      "brand identity",
 }
 
@@ -40,10 +55,19 @@ SUBJECT = {
     "website":    "Website Design and Build",
     "web_app":    "Web App Design and Build",
     "mobile_app": "Mobile App Design and Build",
+    "web_mobile_app": "Web and Mobile App Design and Build",
 }
 
+# What 3.10 and the developer-accounts item call the part that goes to the app
+# stores: the whole deliverable for a mobile app, only the mobile part otherwise.
+STORE_APP = {"web_mobile_app": "mobile app"}
+
 # The list in section 2.2: a website lists pages, an app lists features.
-SCOPE_LIST = {"website": "pages", "web_app": "features", "mobile_app": "features"}
+SCOPE_LIST = {"website": "pages", "web_app": "features", "mobile_app": "features",
+              "web_mobile_app": "features"}
+
+# Types whose 2.3 names phones and operating systems, and whose app goes to the stores.
+MOBILE_TYPES = ("mobile_app", "web_mobile_app")
 
 DEFAULTS = {
     "terms.payment_days": 14,
@@ -68,6 +92,11 @@ TYPE_DEFAULTS = {
                             "section 2.2, a web version of the app, app store optimisation, and "
                             "marketing campaigns",
     },
+    "web_mobile_app": {
+        "scope.exclusions": "copywriting (you supply the content), legal and compliance review, "
+                            "data migration from existing systems, integrations not listed in "
+                            "section 2.2, app store optimisation, and marketing or SEO campaigns",
+    },
 }
 
 # Presets whose content only makes sense for one engagement type are named for it
@@ -88,15 +117,17 @@ def preset_mismatches(eng):
     for ref in refs:
         if isinstance(ref, str) and ref.startswith("preset:"):
             name = ref.split(":", 1)[1]
-            kind = name.split(".", 1)[0]
-            if kind in TYPED_PRESETS and not name.startswith(f"{kind}.{slug}"):
+            base = name.split("/")[-1]                  # lk/workplan.website-8week
+            kind = base.split(".", 1)[0]
+            if kind in TYPED_PRESETS and not base.startswith(f"{kind}.{slug}"):
                 bad.append(name)
     return bad
 
 def load(engagement_file):
     eng = json.load(open(engagement_file))
     jur = json.load(open(f"{ROOT}/jurisdictions/{eng['jurisdiction']}.json"))
-    for k, v in {**DEFAULTS, **TYPE_DEFAULTS.get(eng.get("engagement_type"), {})}.items():
+    for k, v in {**DEFAULTS, **TYPE_DEFAULTS.get(eng.get("engagement_type"), {}),
+                 **jur.get("defaults", {})}.items():
         put(eng, k, v)
     eng["_preset_mismatches"]  = preset_mismatches(eng)   # checked before resolve() erases the names
     eng["milestones"]          = resolve(eng["milestones"])
@@ -104,10 +135,21 @@ def load(engagement_file):
         if k in eng["scope"]:
             eng["scope"][k] = resolve(eng["scope"][k])
     eng["timeline"]["tasks"]   = resolve(eng["timeline"]["tasks"])
+    if eng["scope"].get("online_store") and isinstance(eng["scope"].get("inclusions"), list):
+        inc = eng["scope"]["inclusions"]        # the store goes in before the last item, which ends with '.'
+        eng["scope"]["inclusions"] = inc[:-1] + [jur.get("store_inclusion", STORE_INCLUSION)] + inc[-1:]
     eng.setdefault("proposal", {}).setdefault("ref", eng["atp"]["ref"])          # defaults to the ATP ref
     subject = SUBJECT.get(eng.get("engagement_type"), "Design and Build")
     eng["atp"].setdefault("subject", f'{eng["client"]["short_name"]} \u2013 {subject}')
     return eng, jur
+
+
+STORE_INCLUSION = ("an online store: your products set up with payments through your payment "
+                   "provider, and order notifications;")
+
+def options_on(eng):
+    """The options switched on for this engagement, e.g. {'online_store'}."""
+    return {o for o in OPTIONS if eng.get("scope", {}).get(o)}
 
 
 _WEEK_WORDS = {"one":1,"two":2,"three":3,"four":4,"five":5,"six":6,"seven":7,
@@ -138,8 +180,8 @@ def validate(eng, jur):
     # 11.0 invoices the final milestone on acceptance under 3.6, and 3.5 starts the
     # support clock there too. A final milestone "at launch" contradicts both.
     if eng["milestones"] and not re.search(r"\bacceptance\b", eng["milestones"][-1]["description"]):
-        errs.append("the final milestone must be invoiced on acceptance - sections 3.6 and 11 "
-                    "depend on it")
+        errs.append("the final milestone must be invoiced on acceptance - the acceptance, support "
+                    "and delay clauses depend on it")
     if eng["fee"]["discount"] > eng["fee"]["standard"]:
         errs.append("discount exceeds standard price")
     elif eng["fee"]["standard"] - eng["fee"]["discount"] <= 0:
@@ -174,11 +216,15 @@ def validate(eng, jur):
         errs.append(f"preset '{name}' is not a {etype} preset - pick one named "
                     f"{name.split('.')[0]}.{etype.replace('_', '-')}...")
     # every field the contract prints: an empty one reads as 'To: - Acme' or 'dated .'
-    required = ["project.name","client.legal_name","client.abn","client.short_name","client.address",
+    required = ["project.name","client.legal_name",f"client.{jur.get('client_id', 'abn')}",
+                "client.short_name","client.address",
                 "client.contact_name","atp.ref","atp.date","proposal.ref","proposal.date",
                 "scope.platform","timeline.duration"]
-    if etype == "mobile_app":
+    if etype in MOBILE_TYPES:
         required.append("scope.devices")            # 2.3 names the phones and OS versions
+    for opt in options_on(eng):
+        if etype not in OPTIONS[opt]:
+            errs.append(f"{opt} applies only to {', '.join(OPTIONS[opt])} contracts, not {etype}")
     for path in required:
         cur, ok = eng, True
         for k in path.split("."):
@@ -187,6 +233,18 @@ def validate(eng, jur):
         if not ok: errs.append(f"missing or empty: {path}")
     listed = SCOPE_LIST[etype]
     if not eng["scope"].get(listed): errs.append(f"scope.{listed} is empty")
+    # A row may carry a level: 1 is a subpage of the row above, 2 a subpage of that.
+    # A level can only go one deeper than the row before it.
+    prev = -1
+    for i, row in enumerate(eng["scope"].get(listed) or []):
+        level = row[2] if isinstance(row, (list, tuple)) and len(row) > 2 else 0
+        if level not in (0, 1, 2):
+            errs.append(f"{listed} row {i + 1} ('{row[0]}') has level {level} - use 0, 1 or 2")
+            continue
+        if level > prev + 1:
+            errs.append(f"{listed} row {i + 1} ('{row[0]}') is a subpage with no "
+                        f"{'page' if level == 1 else 'subpage'} above it")
+        prev = level
     if not eng["scope"].get("inclusions"): errs.append("scope.inclusions is empty")
     if not eng["timeline"].get("tasks"): errs.append("timeline.tasks is empty")
     return errs
@@ -198,33 +256,42 @@ def derive(eng, jur):
     disc = Decimal(str(eng["fee"]["discount"]))
     total = std - disc
     tax   = (total * rate).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    sym   = jur.get("currency_symbol", "$")
+    cash  = lambda v: money(v, sym)             # $1,000.00 or LKR 1,000.00
     d = {
       "deliverable": eng.get("deliverable") or DELIVERABLE.get(eng.get("engagement_type"), "work"),
-      "fee.standard": money(std), "fee.discount": money(disc),
-      "fee.total": money(total), "fee.tax": money(tax), "fee.total_inc": money(total+tax),
+      "fee.standard": cash(std), "fee.discount": cash(disc),
+      "fee.total": cash(total), "fee.tax": cash(tax), "fee.total_inc": cash(total+tax),
     }
     # "a website" but "an app" - the article has to follow the noun
     d["deliverable.article"] = "an" if d["deliverable"][:1].lower() in "aeiou" else "a"
+    d["store_app"] = STORE_APP.get(eng.get("engagement_type"), d["deliverable"])
+    # 2.3 lists what the client holds and pays for: photography, domain and hosting,
+    # plus the app store accounts and a payment provider account where they apply
+    held = 3 + (eng.get("engagement_type") in MOBILE_TYPES) + ("online_store" in options_on(eng))
+    d["held.count"] = {3: "Three", 4: "Four", 5: "Five"}[held]
 
     tx, cl = jur["tax"]["name"], eng["client"]["short_name"]
     d["fee.headline"] = (
-        f'The standard build price for this scope is {money(std)} excluding {tx}. '
-        f'{cl} receives a discount of {money(disc)}, giving a total of {money(total)} excluding {tx}.'
+        f'The standard build price for this scope is {cash(std)} excluding {tx}. '
+        f'{cl} receives a discount of {cash(disc)}, giving a total of {cash(total)} excluding {tx}.'
         if disc > 0 else
-        f'The price for this scope is {money(total)} excluding {tx}.')
+        f'The price for this scope is {cash(total)} excluding {tx}.')
     rows, run_ex = [], Decimal("0")
     for i,m in enumerate(eng["milestones"]):
         ex = (total * Decimal(str(m["percent"])) / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         if i == len(eng["milestones"])-1: ex = total - run_ex      # last absorbs rounding
         run_ex += ex
         inc = (ex * (1+rate)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        rows.append([str(i+1), m["description"], money(ex), money(inc)])
+        rows.append([str(i+1), m["description"], cash(ex), cash(inc)])
     assert run_ex == total, f"milestone amounts {run_ex} != total {total}"
     d["_milestone_rows"] = rows
     inc = eng["support"]["included"]
     d["support.included.period"]   = f'{inc["value"]} {inc["unit"]}'
     d["support.included.sentence"] = f'{inc["value"]} {inc["unit"]} of support'
-    d["support.plan.price"] = money(eng["support"]["plan"]["price"])
+    if "plan" in eng["support"]:                 # Sri Lankan contracts quote ongoing support separately
+        d["support.plan.price"] = cash(eng["support"]["plan"]["price"])
+    d["tax.rate_pct"] = f"{rate * 100:.1f}".rstrip("0").rstrip(".") + "%"
     return d
 
 def flatten(prefix, obj, out):
@@ -255,7 +322,7 @@ def fill_text(doc, tokens):
 BLOCK_OPEN  = re.compile(r"^\{\{\?([\w|]+)\}\}$")
 BLOCK_CLOSE = re.compile(r"^\{\{/([\w|]+)\}\}$")
 
-def strip_blocks(doc, engagement_type):
+def strip_blocks(doc, engagement_type, options=()):
     """{{?website}} ... {{/website}} keeps its contents only for that engagement type.
 
     A block can name several types: {{?web_app|mobile_app}} ... {{/web_app|mobile_app}}.
@@ -274,10 +341,10 @@ def strip_blocks(doc, engagement_type):
         if m:
             if open_at is not None:
                 raise ValueError(f"nested conditional block {{{{?{m.group(1)}}}}} inside {{{{?{name}}}}}")
-            unknown = [n for n in m.group(1).split("|") if n not in TYPES]
+            unknown = [n for n in m.group(1).split("|") if n not in TYPES and n not in OPTIONS]
             if unknown:
                 raise ValueError(f"conditional block {{{{?{m.group(1)}}}}} names unknown type(s) "
-                                 f"{', '.join(unknown)} (known: {', '.join(TYPES)})")
+                                 f"{', '.join(unknown)} (known: {', '.join((*TYPES, *OPTIONS))})")
             open_at, name = idx, m.group(1)
             continue
         m = BLOCK_CLOSE.match(txt)
@@ -285,7 +352,7 @@ def strip_blocks(doc, engagement_type):
             if open_at is None or m.group(1) != name:
                 raise ValueError(f"unmatched {{{{/{m.group(1)}}}}}")
             span = children[open_at:idx + 1]
-            if engagement_type in name.split("|"):
+            if engagement_type in name.split("|") or set(options) & set(name.split("|")):
                 drop += [span[0], span[-1]]; kept += 1
             else:
                 drop += span; cut += 1
@@ -312,6 +379,16 @@ def set_cell(t, r, c, v):
         for x in p.runs[1:]: x.text = ""
     else: p.add_run(v)
 
+def indent_subpages(table, first, levels):
+    """Show subpages under their page: indented, and led by an en dash."""
+    for i, level in enumerate(levels):
+        if not level:
+            continue
+        p = table.rows[first + i].cells[0].paragraphs[0]
+        p.paragraph_format.left_indent = Twips(280 * level)
+        if p.runs:
+            p.runs[0].text = "\u2013 " + p.runs[0].text
+
 def fill_rows(table, marker, data):
     """Clone the row carrying {{#marker...}} once per data item."""
     tpl_idx = None
@@ -325,6 +402,25 @@ def fill_rows(table, marker, data):
             table.rows[tpl_idx+n-1]._tr.addnext(copy.deepcopy(tpl_tr)); target = tpl_idx+n
         for c,val in enumerate(item): set_cell(table, target, c, str(val))
     return len(data)
+
+def flag_placeholders(doc):
+    """Highlight every run holding a placeholder, and return the placeholders found."""
+    found = []
+    def walk(container):
+        for p in container.paragraphs:
+            for r in p.runs:
+                hits = PLACEHOLDER.findall(r.text)
+                if hits:
+                    found.extend(hits)
+                    r.font.highlight_color = WD_COLOR_INDEX.YELLOW
+        for t in container.tables:
+            for row in t.rows:
+                for c in row.cells: walk(c)
+    walk(doc)
+    for s in doc.sections:
+        for part in (s.header, s.footer):
+            walk(part)
+    return found
 
 def mark_draft(doc):
     """Put DRAFT_MARK at the front of the running header, in bold red, on every page."""
@@ -348,7 +444,7 @@ def build(engagement_file, out_file, draft=False):
     eng, jur = load(engagement_file)
     errs = validate(eng, jur)
     etype = eng.get("engagement_type")
-    if etype in TYPES and etype not in REVIEWED and not draft:
+    if etype in TYPES and etype not in reviewed(jur) and not draft:
         errs.append(f"the {etype} clauses have not been legally reviewed, so this cannot be "
                     f"issued - build a review copy with --draft")
     if errs:
@@ -360,20 +456,25 @@ def build(engagement_file, out_file, draft=False):
     flatten("", eng, tokens)                 # client.*, atp.*, scope.platform, terms.*
     tokens.update({k:v for k,v in d.items() if not k.startswith("_")})
 
-    doc = docx.Document(f"{ROOT}/template/atp-website.docx")
+    doc = docx.Document(f"{ROOT}/template/{jur.get('template', 'atp-website.docx')}")
 
     # conditional blocks BEFORE anything addresses a table
-    kept, cut = strip_blocks(doc, eng.get("engagement_type"))
+    kept, cut = strip_blocks(doc, eng.get("engagement_type"), options_on(eng))
 
     # repeating blocks, located by marker so a stripped table cannot shift indices
     listed = SCOPE_LIST[etype]
-    for marker, data in ((listed,       eng["scope"][listed]),
+    listed_rows = eng["scope"][listed]
+    levels = [r[2] if len(r) > 2 else 0 for r in listed_rows]
+    for marker, data in ((listed,       [r[:2] for r in listed_rows]),
                          ("milestones", d["_milestone_rows"]),
                          ("tasks",      eng["timeline"]["tasks"])):
         t = find_table(doc, marker)
         if t is None:
             raise ValueError(f"template has no {{{{#{marker}}}}} table for a {etype} build")
+        first = next(i for i, row in enumerate(t.rows) if any("{{#" + marker in c.text for c in row.cells))
         fill_rows(t, marker, data)
+        if marker == listed:
+            indent_subpages(t, first, levels)
 
     # inclusion bullets: clone the marker paragraph
     for p in doc.paragraphs:
@@ -391,7 +492,8 @@ def build(engagement_file, out_file, draft=False):
             break
 
     fill_text(doc, tokens)
-    if etype not in REVIEWED:
+    placeholders = flag_placeholders(doc)
+    if etype not in reviewed(jur):
         mark_draft(doc)
     doc.save(out_file)
 
@@ -410,18 +512,23 @@ def build(engagement_file, out_file, draft=False):
     em = [ln.strip() for ln in blob.split("\n") if "\u2014" in ln]
 
     print(f"built -> {out_file}")
-    if etype not in REVIEWED:
+    if etype not in reviewed(jur):
         print(f"  DRAFT - the {etype} clauses are not legally reviewed. Marked in the header; not for issue.")
     print(f"  {listed} {len(eng['scope'][listed])} · milestones {len(d['_milestone_rows'])} · tasks {len(eng['timeline']['tasks'])}")
-    print(f"  type {eng.get('engagement_type')} · deliverable '{d['deliverable']}' · blocks kept {kept}, cut {cut}")
+    opts = ", ".join(sorted(options_on(eng))) or "none"
+    print(f"  type {eng.get('engagement_type')} · options {opts} · deliverable '{d['deliverable']}' · blocks kept {kept}, cut {cut}")
     print(f"  total {d['fee.total']} ex / {d['fee.total_inc']} inc {jur['tax']['name']}")
     print("  UNREPLACED TOKENS:", sorted(leftover) if leftover else "none")
+    if placeholders:
+        print(f"  PLACEHOLDERS ({len(placeholders)}, highlighted) - fill these before the contract is issued:")
+        for ph in sorted(set(placeholders)):
+            print(f"    {ph}")
     if em:
         print(f"  EM DASHES: {len(em)} \u2014 house style is the spaced en dash \u2013")
         for ln in em[:6]:
             i = ln.index("\u2014")
             print(f"    ...{ln[max(0, i-56):i+54]}...")
-    return not leftover and not em
+    return not leftover and not em and (draft or not placeholders)
 
 if __name__ == "__main__":
     draft = "--draft" in sys.argv

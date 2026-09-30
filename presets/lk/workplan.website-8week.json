@@ -1,0 +1,67 @@
+[
+ [
+  "Project kick-off and requirement gathering",
+  "{{provider.short_name}} / {{client.short_name}}",
+  "Week 1"
+ ],
+ [
+  "Brand guidelines and images provided",
+  "{{client.short_name}}",
+  "Week 1"
+ ],
+ [
+  "First design draft (primary templates)",
+  "{{provider.short_name}}",
+  "Week 2"
+ ],
+ [
+  "Design feedback",
+  "{{client.short_name}}",
+  "Week 2"
+ ],
+ [
+  "Design completion and freeze",
+  "{{provider.short_name}} / {{client.short_name}}",
+  "Week 3"
+ ],
+ [
+  "Content provided",
+  "{{client.short_name}}",
+  "Week 4"
+ ],
+ [
+  "Development – Demo 1",
+  "{{provider.short_name}}",
+  "Week 5"
+ ],
+ [
+  "Development completion and content upload",
+  "{{provider.short_name}}",
+  "Week 6"
+ ],
+ [
+  "Access to the hosting account provided",
+  "{{client.short_name}}",
+  "Week 6"
+ ],
+ [
+  "Review and testing under section 3.4",
+  "{{client.short_name}}",
+  "Week 7"
+ ],
+ [
+  "Corrections, then acceptance",
+  "{{provider.short_name}} / {{client.short_name}}",
+  "Week 8"
+ ],
+ [
+  "Site migration and go-live",
+  "{{provider.short_name}}",
+  "Week 8"
+ ],
+ [
+  "Post-go-live checks and handover",
+  "{{provider.short_name}}",
+  "Week 8"
+ ]
+]

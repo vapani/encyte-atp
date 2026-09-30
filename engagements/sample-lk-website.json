@@ -1,0 +1,102 @@
+{
+ "jurisdiction": "LK",
+ "engagement_type": "website",
+ "atp": {
+  "date": "30 September 2026",
+  "ref": "26-EXL-WD-081"
+ },
+ "proposal": {
+  "ref": "26-EXL-WD-080",
+  "date": "22 September 2026"
+ },
+ "client": {
+  "legal_name": "Example Lanka (Private) Limited",
+  "reg_no": "PV00000",
+  "address": "No. 10, Sample Road, Colombo 03, Sri Lanka",
+  "short_name": "Example Lanka",
+  "contact_name": "Sample Contact"
+ },
+ "project": {
+  "name": "Example Lanka website"
+ },
+ "scope": {
+  "inclusions": "preset:lk/inclusions.website",
+  "platform": "WordPress",
+  "pages": [
+   [
+    "Home",
+    "Introduces the company and leads visitors to its services"
+   ],
+   [
+    "About Us",
+    "The company’s story, leadership and values"
+   ],
+   [
+    "Services",
+    "An overview of every service"
+   ],
+   [
+    "Consulting",
+    "",
+    1
+   ],
+   [
+    "Implementation",
+    "",
+    1
+   ],
+   [
+    "Cloud Migration",
+    "",
+    2
+   ],
+   [
+    "ERP Rollout",
+    "",
+    2
+   ],
+   [
+    "Managed Support",
+    "",
+    1
+   ],
+   [
+    "Insights",
+    "Articles and news, published by the Client"
+   ],
+   [
+    "Blog",
+    "",
+    1
+   ],
+   [
+    "News and Events",
+    "",
+    1
+   ],
+   [
+    "Careers",
+    "Current vacancies and how to apply"
+   ],
+   [
+    "Contact Us",
+    "Enquiry form, telephone, email and map"
+   ]
+  ]
+ },
+ "fee": {
+  "standard": 630000,
+  "discount": 0
+ },
+ "milestones": "preset:lk/milestones.30-40-30",
+ "timeline": {
+  "duration": "Eight weeks",
+  "tasks": "preset:lk/workplan.website-8week"
+ },
+ "support": {
+  "included": {
+   "value": 3,
+   "unit": "months"
+  }
+ }
+}
