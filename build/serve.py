@@ -28,13 +28,16 @@ extractor = _load("extract")
 BUILD_LOCK = threading.Lock()
 
 
-def presets(prefix, etype=None):
+def presets(prefix, etype=None, folder=""):
     """Preset names for `prefix`. Scope and work-plan presets are named for their
     engagement type (inclusions.website, workplan.mobile-app-14week); pass etype
-    to list only that type's, so an app preset never appears on the website form."""
-    names = sorted(os.path.basename(p)[:-5] for p in glob.glob(f"{ROOT}/presets/{prefix}.*.json"))
+    to list only that type's, so an app preset never appears on the website form.
+    A country with its own template keeps its presets in a folder (presets/lk/),
+    and their names carry it: lk/workplan.website-8week."""
+    at = f"{folder}/" if folder else ""
+    names = sorted(at + os.path.basename(p)[:-5] for p in glob.glob(f"{ROOT}/presets/{at}{prefix}.*.json"))
     if etype:
-        names = [n for n in names if n.startswith(f"{prefix}.{etype.replace('_', '-')}")]
+        names = [n for n in names if n[len(at):].startswith(f"{prefix}.{etype.replace('_', '-')}")]
     return names
 
 
@@ -205,20 +208,22 @@ button.lv{padding:5px 8px;font-size:13px;line-height:1;margin-right:2px}
 </div>
 
 <div class="card"><h2>What are we building?</h2><div class="grid">
+  <div class="field"><label>Country</label><select id="jurisdiction" onchange="applyCountry(this.value)">__COUNTRY_OPTIONS__</select><div class="badge">check this</div></div>
   <div class="field"><label>Contract type</label><select id="engagement_type" onchange="applyType(this.value)">
     <option value="website">Website</option><option value="web_app">Web app</option>
     <option value="mobile_app">Mobile app</option>
     <option value="web_mobile_app">Web and mobile app</option></select><div class="badge">check this</div></div>
 </div>
-<div id="draftnote" class="note" style="display:none"><strong>Draft only.</strong> The web app and
-  mobile app terms have not been legally reviewed yet. This contract will be marked
-  <em>DRAFT FOR LEGAL REVIEW &ndash; NOT FOR ISSUE</em> on every page. Do not send it to a client.</div>
+<div id="draftnote" class="note" style="display:none"><strong>Draft only.</strong> <span id="draftwhy"></span>
+  This contract will be marked <em>DRAFT FOR LEGAL REVIEW &ndash; NOT FOR ISSUE</em> on every page.
+  Do not send it to a client.</div>
 </div>
 
 <div class="card"><h2>Client</h2><div class="grid">
   <div class="field full"><label>Legal entity name</label><input id="client.legal_name" placeholder="e.g. Acme Holdings Pty Ltd"><div class="badge">check this</div></div>
   <div class="field"><label>Trading / short name</label><input id="client.short_name" placeholder="e.g. Acme"><div class="badge">check this</div></div>
-  <div class="field"><label>ABN</label><input id="client.abn" placeholder="e.g. 51 824 753 556"><div class="badge">check this</div></div>
+  <div class="field" id="abn-field"><label>ABN</label><input id="client.abn" placeholder="e.g. 51 824 753 556"><div class="badge">check this</div></div>
+  <div class="field" id="reg-field" style="display:none"><label>Company registration number</label><input id="client.reg_no" placeholder="e.g. PV12345"><div class="badge">check this</div></div>
   <div class="field full"><label>Address</label><input id="client.address" placeholder="e.g. 12 Example St, Richmond VIC 3121"><div class="badge">check this</div></div>
   <div class="field"><label>Contact person</label><input id="client.contact_name" placeholder="e.g. Jane Doe"><div class="badge">check this</div></div>
 </div></div>
@@ -236,13 +241,12 @@ button.lv{padding:5px 8px;font-size:13px;line-height:1;margin-right:2px}
   <div class="field"><label>Platform</label><input id="scope.platform" value="WordPress"><div class="badge">check this</div></div>
   <div class="field full" id="store-field"><label style="font-weight:400">
     <input type="checkbox" id="online_store" style="width:auto;margin:0 8px 0 0;vertical-align:-2px">
-    <strong>Includes an online store</strong> &ndash; payments through Stripe, Square or PayPal. Adds the
-    payment provider account and an online store clause (3.8).</label></div>
+    <strong>Includes an online store</strong> &ndash; <span id="store-text"></span></label></div>
   <div class="field full" id="devices-field" style="display:none"><label>Devices and operating systems</label>
     <input id="scope.devices" placeholder="e.g. iPhones running iOS 17 or later and Android phones running Android 10 or later"><div class="badge">check this</div></div>
   <div class="field full"><label>What is <em>not</em> included</label>
     <input id="scope.exclusions" placeholder="leave blank for the standard list"></div>
-  <div class="field full"><label>Hosting note</label>
+  <div class="field full" id="hosting-field"><label>Hosting note</label>
     <input id="hosting.note" placeholder="optional, e.g. Indicatively about USD $14 a month."></div>
 </div>
 <div style="margin-top:18px">
@@ -256,12 +260,12 @@ button.lv{padding:5px 8px;font-size:13px;line-height:1;margin-right:2px}
 </div></div>
 
 <div class="card"><h2>Fee and support</h2><div class="grid">
-  <div class="field"><label>Standard price, excluding GST</label><input id="fee.standard" placeholder="e.g. 9500"><div class="badge">check this</div></div>
-  <div class="field"><label>Discount, excluding GST</label><input id="fee.discount" value="0"></div>
-  <div class="field"><label>Payment split</label><select id="milestones">__MILESTONES__</select></div>
+  <div class="field"><label id="std-label">Standard price, excluding GST</label><input id="fee.standard" placeholder="e.g. 9500"><div class="badge">check this</div></div>
+  <div class="field"><label id="disc-label">Discount, excluding GST</label><input id="fee.discount" value="0"><div class="badge">check this</div></div>
+  <div class="field"><label>Payment split</label><select id="milestones"></select></div>
   <div class="field"><label>Included support</label><input id="support.value" value="60"></div>
   <div class="field"><label>Support unit</label><input id="support.unit" value="days"></div>
-  <div class="field"><label>Care plan, per month excl GST</label><input id="support.price" value="99"></div>
+  <div class="field" id="plan-field"><label>Care plan, per month excl GST</label><input id="support.price" value="99"></div>
 </div></div>
 
 <div class="card"><h2>Timeline</h2>
@@ -283,10 +287,12 @@ button.lv{padding:5px 8px;font-size:13px;line-height:1;margin-right:2px}
 <div id="status"></div>
 </main>
 <script>
-// Per contract type: inclusions presets, standard page or feature list, standard plan,
-// duration, payment split, platform, labels, and whether the terms are still a draft.
-const TYPES = __TYPES__;
-let current = 'website';
+// Per country: its contract types, payment splits, labels and defaults. Per contract
+// type: inclusions presets, standard page or feature list, standard plan, duration,
+// payment split, platform, labels, and whether the terms are still a draft.
+const COUNTRIES = __COUNTRIES__;
+let country = 'AU', current = 'website';
+let TYPES = COUNTRIES[country].types;
 const $ = id => document.getElementById(id);
 
 // Responsibility is one of three; the contract gets the matching tokens.
@@ -348,7 +354,7 @@ function addPage(name, purpose, level){
 }
 function loadPreset(){
   $('pages').querySelector('tbody').innerHTML = '';
-  TYPES[current].list.forEach(r => addPage(r[0], r[1]));
+  TYPES[current].list.forEach(r => addPage(r[0], r[1], r[2] || 0));
   markGuess('pages', false);
 }
 function markGuess(id, on){
@@ -365,17 +371,25 @@ function planRows(){
 }
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
-// Switch the form to a contract type. Anything still at the previous type's
-// standard value is swapped for the new one; anything edited is left alone.
-function applyType(t, init){
-  const prev = TYPES[current], T = TYPES[t];
-  const std = {
-    list: init || same(listRows(), prev.list),
-    plan: init || same(planRows(), prev.plan),
-    duration: init || $('timeline.duration').value.trim() === prev.duration,
-    split: init || $('milestones').value === prev.split,
-    platform: init || $('scope.platform').value.trim() === prev.platform,
+// Which values are still the standard ones for the current country and type. Those
+// are swapped when the type or the country changes; anything edited is left alone.
+function standardNow(){
+  const prev = TYPES[current], C = COUNTRIES[country];
+  return {
+    list: same(listRows(), prev.list),
+    plan: same(planRows(), prev.plan),
+    duration: $('timeline.duration').value.trim() === prev.duration,
+    split: $('milestones').value === prev.split,
+    platform: $('scope.platform').value.trim() === prev.platform,
+    support: $('support.value').value.trim() === C.support[0] && $('support.unit').value.trim() === C.support[1],
   };
+}
+const ALL = {list: true, plan: true, duration: true, split: true, platform: true, support: true};
+
+// Switch the form to a contract type.
+function applyType(t, init, std){
+  std = init ? ALL : (std || standardNow());
+  const T = TYPES[t];
   current = t;
   $('engagement_type').value = t;
   $('scope.inclusions').innerHTML = T.inclusions.map(n => '<option value="' + n + '">' + n + '</option>').join('');
@@ -385,6 +399,7 @@ function applyType(t, init){
   $('store-field').style.display = t === 'website' ? '' : 'none';     // stores are a website option
   if(t !== 'website') $('online_store').checked = false;
   $('draftnote').style.display = T.draft ? '' : 'none';
+  $('draftwhy').textContent = COUNTRIES[country].draft_why;
   $('scope.platform').placeholder = T.platform_hint;
   $('project.name').placeholder = T.project_hint;
   if(std.list) loadPreset();
@@ -395,7 +410,33 @@ function applyType(t, init){
   if(std.split) $('milestones').value = T.split;
   if(std.platform) $('scope.platform').value = T.platform;
 }
-applyType('website', true);
+
+// Switch the form to a country: its entity, template, currency and tax, the client's
+// identifier, its presets, and the contract types its template covers.
+function applyCountry(c, init){
+  const std = init ? ALL : standardNow();
+  country = c; TYPES = COUNTRIES[c].types;
+  const C = COUNTRIES[c];
+  $('jurisdiction').value = c;
+  $('engagement_type').innerHTML = Object.keys(TYPES)
+    .map(t => '<option value="' + t + '">' + TYPES[t].name + '</option>').join('');
+  $('milestones').innerHTML = C.splits
+    .map(n => '<option value="' + n + '">' + n.replace(/^\\w+\\//, '') + '</option>').join('');
+  $('abn-field').style.display = C.id === 'abn' ? '' : 'none';
+  $('reg-field').style.display = C.id === 'reg_no' ? '' : 'none';
+  $('hosting-field').style.display = C.hosting ? '' : 'none';
+  $('plan-field').style.display = C.plan_price ? '' : 'none';
+  $('store-text').textContent = C.store;
+  $('std-label').textContent = 'Standard price, excluding ' + C.tax;
+  $('disc-label').textContent = 'Discount, excluding ' + C.tax;
+  $('fee.standard').placeholder = C.price_hint;
+  $('client.legal_name').placeholder = C.name_hint;
+  $('client.address').placeholder = C.address_hint;
+  if(std.support){ $('support.value').value = C.support[0]; $('support.unit').value = C.support[1]; }
+  // the other country's payment splits do not exist here, so the split always resets
+  applyType(TYPES[current] ? current : 'website', init, {...std, split: true});
+}
+applyCountry('AU', true);
 $('atp.date').value = new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'});
 
 // ---- proposal upload
@@ -414,13 +455,21 @@ async function send(f){
   const j = await r.json();
   if(j.error){ drop.textContent = 'Could not read it: ' + j.error; return; }
   let filled = 0;
-  if(j.fields.engagement_type){
-    applyType(j.fields.engagement_type.value);
-    markGuess('engagement_type', true);
+  const extra = [];
+  if(j.fields.jurisdiction){
+    applyCountry(j.fields.jurisdiction.value);
+    markGuess('jurisdiction', true);
     filled++;
   }
+  if(j.fields.engagement_type){
+    const t = j.fields.engagement_type.value;
+    if(TYPES[t]){ applyType(t); markGuess('engagement_type', true); filled++; }
+    else extra.push(COUNTRIES[country].adjective + ' contracts cover '
+      + Object.values(TYPES).map(x => x.name.toLowerCase()).join(', ') + ' only so far, so the '
+      + 'contract type stays ' + TYPES[current].name + ' - check whether this job needs its own contract');
+  }
   for(const [k,v] of Object.entries(j.fields)){
-    if(k === 'engagement_type') continue;
+    if(k === 'engagement_type' || k === 'jurisdiction') continue;
     if(k === 'scope.pages'){
       $('pages').querySelector('tbody').innerHTML = '';
       v.value.forEach(r => addPage(r[0], r[1], r[2] || 0));
@@ -432,7 +481,7 @@ async function send(f){
     if(el){ el.value = v.value; markGuess(k, v.confidence === 'low'); filled++; }
   }
   drop.textContent = f.name + ' — ' + filled + ' fields filled';
-  const notes = j.notes || [];
+  const notes = (j.notes || []).concat(extra);
   $('xnotes').innerHTML = '<div class="note"><strong>Read before you build.</strong> '
     + 'Shaded fields were guessed from patterns in the document and are often wrong.'
     + (notes.length ? '<ul>' + notes.map(n => '<li>' + n + '</li>').join('') + '</ul>' : '')
@@ -452,7 +501,7 @@ function notBuilt(errors, fields){
   $('status').scrollIntoView({behavior:'smooth', block:'center'});
 }
 $('go').onclick = async () => {
-  const ids = ['client.legal_name','client.short_name','client.abn','client.address',
+  const ids = ['jurisdiction','client.legal_name','client.short_name','client.abn','client.reg_no','client.address',
     'client.contact_name','atp.ref','atp.date','proposal.ref','proposal.date',
     'engagement_type','project.name','scope.inclusions','scope.platform','scope.devices',
     'scope.exclusions','hosting.note',
@@ -462,19 +511,27 @@ $('go').onclick = async () => {
   ids.forEach(i => data[i] = $(i).value.trim());
   document.querySelectorAll('.field.bad, #pages tr.bad, #tasks tr.bad').forEach(el => el.classList.remove('bad'));
   // A row with a page but no purpose used to vanish from the contract without a word.
+  // A subpage's purpose is optional, and so is every purpose in a Sri Lankan contract,
+  // whose proposals list pages by name.
   const rows = [...document.querySelectorAll('#pages tbody tr')];
-  const half = rows.filter(tr => !tr.querySelector('.pn').value.trim() !== !tr.querySelector('.pp').value.trim());
+  const needsDesc = tr => COUNTRIES[country].desc_required && !Number(tr.dataset.level || 0);
+  const half = rows.filter(tr => {
+    const n = tr.querySelector('.pn').value.trim(), d = tr.querySelector('.pp').value.trim();
+    return (!n && d) || (n && !d && needsDesc(tr));
+  });
   if(half.length){
     half.forEach(tr => tr.classList.add('bad'));
-    return notBuilt(['Every ' + TYPES[current].item.toLowerCase() + ' needs a name and a '
-                     + TYPES[current].desc.toLowerCase() + ' - ' + half.length
-                     + (half.length === 1 ? ' row is' : ' rows are') + ' incomplete'], []);
+    const item = TYPES[current].item.toLowerCase(), desc = TYPES[current].desc.toLowerCase();
+    return notBuilt([(COUNTRIES[country].desc_required
+                       ? 'Every ' + item + ' needs a name and a ' + desc + ', except a sub' + item
+                       : 'Every ' + item + ' needs a name')
+                     + ' - ' + half.length + (half.length === 1 ? ' row is' : ' rows are') + ' incomplete'], []);
   }
   data.online_store = $('online_store').checked;
   data.pages = rows
       .map(tr => [tr.querySelector('.pn').value.trim(), tr.querySelector('.pp').value.trim(),
                   Number(tr.dataset.level || 0)])
-      .filter(r => r[0] && r[1]);
+      .filter((r, i) => r[0] && (r[1] || !needsDesc(rows[i])));
   const trows = [...document.querySelectorAll('#tasks tbody tr')];
   const thalf = trows.filter(tr => !tr.querySelector('.tn').value.trim() !== !tr.querySelector('.tw').value.trim());
   if(thalf.length){
@@ -540,7 +597,7 @@ def form_problems(eng):
     Each is (message, [form field ids]) so the form can mark the fields.
     """
     out = []
-    abn = eng["client"]["abn"]
+    abn = eng["client"].get("abn", "")            # a Sri Lankan client has a registration number
     if abn.strip() and not abn_valid(abn):
         out.append((f"The ABN {abn} is not a valid ABN - check for a typo, or look it up at "
                     f"abr.business.gov.au", ["client.abn"]))
@@ -576,7 +633,8 @@ RESPONSIBLE = {"{{provider.short_name}}", "{{client.short_name}}",
 
 LABELS = {
     "client.legal_name": "Legal entity name", "client.short_name": "Trading / short name",
-    "client.abn": "ABN", "client.address": "Address", "client.contact_name": "Contact person",
+    "client.abn": "ABN", "client.reg_no": "Company registration number",
+    "client.address": "Address", "client.contact_name": "Contact person",
     "atp.ref": "ATP reference", "atp.date": "ATP date", "proposal.ref": "Proposal reference",
     "proposal.date": "Proposal date", "project.name": "Project name", "scope.platform": "Platform",
     "timeline.duration": "Duration", "scope.devices": "Devices and operating systems",
@@ -612,7 +670,33 @@ def friendly(err):
 
 
 DEFAULT_SPLIT = "milestones.20-40-40"
-LOW_PRICE = 500      # below this the form asks before building; see build_in()
+
+# What the form shows and assumes for each country. The contract itself - entity,
+# template, tax, presets folder - comes from the jurisdiction pack.
+COUNTRY = {
+    "AU": {"label": "Australia", "adjective": "Australian", "splits_default": {"website": DEFAULT_SPLIT}, "support": ["60", "days"],
+           "plan_price": True, "hosting": True, "desc_required": True,
+           "low_price": 500,        # below this the form asks before building; see build_in()
+           "store": "payments through Stripe, Square or PayPal. Adds the payment provider account "
+                    "and an online store clause (3.8).",
+           "draft_why": "The web app and mobile app terms have not been legally reviewed yet.",
+           "price_hint": "e.g. 9500", "name_hint": "e.g. Acme Holdings Pty Ltd",
+           "address_hint": "e.g. 12 Example St, Richmond VIC 3121"},
+    "LK": {"label": "Sri Lanka", "adjective": "Sri Lankan", "splits_default": {"website": "lk/milestones.30-40-30"},
+           "support": ["3", "months"], "plan_price": False, "hosting": False, "desc_required": False,
+           "low_price": 50000,
+           "store": "payments through PayHere, WebXPay or a bank gateway. Adds an online store "
+                    "clause (3.6), with up to 50 products entered.",
+           "draft_why": "The Sri Lankan terms are waiting for approval.",
+           "price_hint": "e.g. 630000", "name_hint": "e.g. Acme (Private) Limited",
+           "address_hint": "e.g. No. 10, Sample Road, Colombo 03"},
+}
+TYPE_NAMES = {"website": "Website", "web_app": "Web app", "mobile_app": "Mobile app",
+              "web_mobile_app": "Web and mobile app"}
+
+
+def jurisdiction(code):
+    return json.load(open(f"{ROOT}/jurisdictions/{code}.json"))
 
 
 NUM_WORDS = {6: "Six", 7: "Seven", 8: "Eight", 9: "Nine", 10: "Ten", 11: "Eleven", 12: "Twelve",
@@ -628,34 +712,47 @@ TYPE_WORDS = {  # list label, item, description, platform default and hint, proj
 }
 
 
-def type_data():
-    """Everything the form switches when the contract type changes, read from presets/."""
-    out = {}
-    for t in builder.TYPES:
+def type_data(jur):
+    """Everything the form switches when the contract type changes, read from presets/,
+    for the types this country's template covers."""
+    folder, out = jur.get("presets", ""), {}
+    splits = {**DEFAULT_SPLITS, **COUNTRY[jur["code"]]["splits_default"]}
+    for t in jur.get("types", builder.TYPES):
         label, item, desc, platform, platform_hint, project_hint = TYPE_WORDS[t]
-        plan = preset_rows(presets("workplan", t)[0])
+        plan = preset_rows(presets("workplan", t, folder)[0])
         weeks = max(builder.weeks_in(r[-1]) for r in plan)
         out[t] = {
-            "inclusions": presets("inclusions", t),
-            "list": preset_rows(presets(builder.SCOPE_LIST[t], t)[0]),
+            "name": TYPE_NAMES[t],
+            "inclusions": presets("inclusions", t, folder),
+            "list": preset_rows(presets(builder.SCOPE_LIST[t], t, folder)[0]),
             "plan": plan,
             "duration": f"{NUM_WORDS.get(weeks, weeks)} weeks",
-            "split": DEFAULT_SPLITS[t],
+            "split": splits[t],
             "platform": platform, "platform_hint": platform_hint, "project_hint": project_hint,
             "list_label": label, "item": item, "desc": desc,
-            "draft": t not in builder.REVIEWED,
+            "draft": t not in builder.reviewed(jur),
         }
     return out
 
 
+def country_data():
+    """Per country: the form's labels and defaults, its payment splits and its types."""
+    out = {}
+    for code, form in COUNTRY.items():
+        jur = jurisdiction(code)
+        out[code] = {**form, "id": jur.get("client_id", "abn"), "tax": jur["tax"]["name"],
+                     "splits": presets("milestones", folder=jur.get("presets", "")),
+                     "types": type_data(jur)}
+    return out
+
+
 def render_page():
-    def opts(names, selected=None):
-        return "".join(f'<option value="{html.escape(n)}"{" selected" if n == selected else ""}>'
-                       f'{html.escape(n)}</option>' for n in names)
-    # The form issues websites only: web app and mobile app clauses are still drafts.
+    options = "".join(f'<option value="{c}">{html.escape(f["label"])} &ndash; '
+                      f'{html.escape(jurisdiction(c)["provider"]["legal_name"])}</option>'
+                      for c, f in COUNTRY.items())
     return (PAGE
-            .replace("__MILESTONES__", opts(presets("milestones"), DEFAULT_SPLIT))
-            .replace("__TYPES__", json.dumps(type_data())))
+            .replace("__COUNTRY_OPTIONS__", options)
+            .replace("__COUNTRIES__", json.dumps(country_data())))
 
 
 # --------------------------------------------------------------------------- server
@@ -712,20 +809,27 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, json.dumps({"errors": [f"bad request: {e}"]}))
 
         def num(key, default=0.0):
-            raw = re.sub(r"[$,]", "", str(d.get(key, "")).strip())
+            raw = re.sub(r"(?i)\b(?:lkr|aud|rs)\b\.?|[$,\s]", "", str(d.get(key, "")).strip())
             return float(raw) if raw else default
 
+        code = d.get("jurisdiction") or "AU"
+        if code not in COUNTRY:
+            return self._send(200, json.dumps({"errors": [f"unknown country '{code}'"]}))
+        jur = jurisdiction(code)
         etype = d.get("engagement_type") or "website"
-        if etype not in builder.TYPES:
-            return self._send(200, json.dumps({"errors": [f"unknown contract type '{etype}'"]}))
+        if etype not in jur.get("types", builder.TYPES):
+            return self._send(200, json.dumps({"errors": [
+                f"{COUNTRY[code]['adjective']} contracts cover "
+                f"{', '.join(TYPE_NAMES[t].lower() for t in jur['types'])} only so far"]}))
         try:
             eng = {
-                "jurisdiction": "AU",
+                "jurisdiction": code,
                 "engagement_type": etype,
                 "atp": {"date": d.get("atp.date", ""), "ref": d.get("atp.ref", "")},
                 "proposal": {"ref": d.get("proposal.ref", ""), "date": d.get("proposal.date", "")},
                 "client": {k: d.get(f"client.{k}", "") for k in
-                           ("legal_name", "abn", "address", "short_name", "contact_name")},
+                           ("legal_name", jur.get("client_id", "abn"), "address", "short_name",
+                            "contact_name")},
                 # a website lists pages in 2.2, an app lists features
                 "scope": {"inclusions": f'preset:{d.get("scope.inclusions")}',
                           builder.SCOPE_LIST[etype]: d.get("pages") or [],
@@ -736,10 +840,13 @@ class Handler(BaseHTTPRequestHandler):
                 "timeline": {"duration": d.get("timeline.duration", ""),
                              "tasks": d.get("tasks") or []},
                 "support": {"included": {"value": int(num("support.value", 60)),
-                                         "unit": d.get("support.unit") or "days"},
-                            "plan": {"price": num("support.price", 99)}},
+                                         "unit": d.get("support.unit") or "days"}},
                 "project": {"name": d.get("project.name", "")},
             }
+            if COUNTRY[code]["plan_price"]:           # a Sri Lankan contract quotes ongoing support separately
+                eng["support"]["plan"] = {"price": num("support.price", 99)}
+            if not COUNTRY[code]["hosting"]:
+                del eng["hosting"]
             if d.get("scope.exclusions"):
                 eng["scope"]["exclusions"] = d["scope.exclusions"]
             if etype in builder.MOBILE_TYPES:
@@ -774,16 +881,19 @@ class Handler(BaseHTTPRequestHandler):
 
         # Valid but implausible: a price this low is usually a misread or a typo
         # ('$ 8, 946' read as $8). Ask, rather than refuse - a small job is possible.
+        jur = jurisdiction(eng["jurisdiction"])
         total = eng["fee"]["standard"] - eng["fee"]["discount"]
-        if total < LOW_PRICE and not confirmed_low:
+        if total < COUNTRY[eng["jurisdiction"]]["low_price"] and not confirmed_low:
             return self._send(200, json.dumps({
-                "confirm": f"The price is ${total:,.2f} excluding GST, which is unusually low for a "
+                "confirm": f"The price is {builder.money(total, jur.get('currency_symbol', '$'))} "
+                           f"excluding {jur['tax']['name']}, which is unusually low for a "
                            f"build. Is that right?\n\nOK builds the contract at this price. Cancel "
                            f"goes back to the form.",
                 "fields": ["fee.standard"]}))
 
-        # App terms are unreviewed: build them as marked drafts, never as issuable contracts.
-        draft = eng["engagement_type"] not in builder.REVIEWED
+        # Unreviewed terms (the app types; Sri Lanka until approved) are built as marked
+        # drafts, never as issuable contracts.
+        draft = eng["engagement_type"] not in builder.reviewed(jur)
         name = (f"ATP-{'DRAFT-' if draft else ''}"
                 f"{re.sub(r'[^A-Za-z0-9]+', '-', eng['client']['short_name'] or 'Client')}.docx")
         out = os.path.join(tmpdir, name)

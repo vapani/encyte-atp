@@ -212,6 +212,9 @@ def validate(eng, jur):
     if etype not in TYPES:
         errs.append(f"engagement_type '{etype}' has no template (one of: {', '.join(TYPES)})")
         return errs
+    if etype not in jur.get("types", TYPES):           # a country's template may not cover every type
+        errs.append(f"the {jur['code']} template has no {etype} contract yet - it builds "
+                    f"{', '.join(jur['types'])} only")
     for name in eng.get("_preset_mismatches", []):
         errs.append(f"preset '{name}' is not a {etype} preset - pick one named "
                     f"{name.split('.')[0]}.{etype.replace('_', '-')}...")

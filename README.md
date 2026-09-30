@@ -40,15 +40,21 @@ it fills in what it can find. It matches patterns, not meaning:
   the standard list. Purposes are left empty, because they are part of the contract's scope.
   A *Store structure* list, as in the MILK proposal, is read with its subpages, and an item
   written *Name (what it covers)* or *Name – what it covers* fills the purpose too.
+- A proposal priced in LKR sets the country to Sri Lanka. The price is read from *net project
+  fee … standard fee … less a discount* (MILK), from a total investment less its SSCL
+  (Colombo Seven Gin), or from *subtotal before tax* (NVQ). The payment split is read from
+  the milestone amounts, e.g. *40% – LKR 204,360.00*, and matched to a Sri Lankan split.
 
-Checked against the NGA, REKT, both Smiles 4 Miles versions, Colombo Seven Gin and Ciro's
-proposals. Anything it guessed is **shaded**, and the notes above the form say what to check.
+Checked against the NGA, REKT, both Smiles 4 Miles versions, both Ciro's versions, the
+marketplace and Angelucci proposals, and in Sri Lanka MILK, Colombo Seven Gin and NVQ. Anything it guessed is **shaded**, and the notes above the form say what to check.
 The client's legal name, ABN and address are rarely in a proposal, so get them from the client.
 
 **Before it builds, the form checks** that every field the contract prints is filled in,
 that the price is not $0, that the ABN passes its check digit, that dates read like
 *8 September 2026* and references like *26-NGA-WD-062*, and that no page is missing its
-purpose. Problems are listed in the form's own words, with the fields marked in red.
+purpose (a subpage's purpose is optional, and so is every purpose in a Sri Lankan contract).
+Problems are listed in the form's own words, with the fields marked in red. The form asks
+before building a price under $500, or LKR 50,000 in Sri Lanka.
 
 **Choose the contract type first** - Website, Web app, Mobile app, or Web and mobile app (one
 contract for a job with both, such as NVQ's "Mobile and Web Application"). It switches
@@ -307,6 +313,8 @@ These pack settings are all optional, and Australia uses none of them:
 | Setting | What it does |
 |---|---|
 | `template` | the template file in `template/`, instead of `atp-website.docx` |
+| `types` | the contract types that template covers; the form offers only these |
+| `presets` | the folder in `presets/` holding that country's presets, e.g. `lk` |
 | `reviewed` | the types that country can issue; any other type builds only with `--draft` |
 | `client_id` | the client field the build requires, `reg_no` instead of `abn` |
 | `currency_symbol` | put in front of every amount, e.g. `LKR ` |
@@ -335,8 +343,11 @@ for SSCL, so 2.5% is added and shown separately. There is no GST or VAT.
 - **Engagement fields** differ from Australia's: `client.reg_no` replaces
   `client.abn`, and `support.plan` is not used, because 4.1 quotes ongoing support
   separately.
-- **Not yet in the form or the wizard.** Build from an engagement file:
-  `python3 build/build.py engagements/sample-lk-website.json out.docx --draft`
+- **In the form**, pick Sri Lanka under *Country*. It asks for a company registration
+  number instead of an ABN, and prices excluding SSCL. There is no care plan price or
+  hosting note, and page purposes are optional, because Sri Lankan proposals list pages by
+  name. Only Website is offered until the app types have a Sri Lankan template (`types` in
+  the pack). The terminal wizard stays Australian.
 
 
 ## Known gaps — deliberately not in the template

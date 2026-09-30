@@ -44,13 +44,17 @@ def read_text(path):
 def _hi(v):  return {"value": v, "confidence": "high"}
 def _lo(v):  return {"value": v, "confidence": "low"}
 
-# Money as Encyte proposals write it: "$5,500", "AUD 4,850", "AUD $2,650".
+# Money as Encyte proposals write it: "$5,500", "AUD 4,850", "AUD $2,650", and in
+# Sri Lanka "LKR 510,900".
 # A thousands group may carry a stray space after the comma - '$ 8, 946' in the
 # Ciro's v1.1 proposal, left by a hand edit in Word - which used to read as $8.
 NUMBER = r"\d{1,3}(?:,\s?\d{3})+(?:\.\d{2})?|\d+(?:\.\d{2})?"
-MONEY = rf"(?:AUD\s*\$?|\$)\s?({NUMBER})"
+CURRENCY = r"(?:AUD\s*\$?|LKR\s*|\$)"
+MONEY = rf"{CURRENCY}\s?({NUMBER})"
 
-LOW_PRICE = 500      # below this, a build price read from a proposal is almost certainly a misread
+# Below this, a build price read from a proposal is almost certainly a misread.
+LOW_PRICE = {"AU": 500, "LK": 50000}
+TAX = {"AU": "GST", "LK": "SSCL"}
 
 def _amount(s):
     try:
@@ -59,7 +63,7 @@ def _amount(s):
         return None
 
 # After a label, an amount may carry no currency at all: "Standard price 5,500 + GST".
-LABELLED_MONEY = rf"(?:(?:AUD\s*\$?|\$)\s?({NUMBER})|\b(\d{{1,3}}(?:,\s?\d{{3}})+|\d{{3,}})(?=\s*\+\s*GST|\s+discount))"
+LABELLED_MONEY = rf"(?:{CURRENCY}\s?({NUMBER})|\b(\d{{1,3}}(?:,\s?\d{{3}})+|\d{{3,}})(?=\s*\+\s*(?:GST|SSCL)|\s+discount))"
 
 def _labelled(flat, *labels):
     """Amount following the first of `labels` that has one. Labels are tried in
@@ -69,6 +73,52 @@ def _labelled(flat, *labels):
         if m:
             return _amount(m.group(1) or m.group(2))
     return None
+
+def _country(flat):
+    """'LK' for a Sri Lankan proposal, else None (Australia is the default).
+
+    Sri Lankan proposals price in LKR and add SSCL. Counting currencies rather than
+    looking for 'Colombo' matters: MILK quotes hosting in USD, and an Australian
+    proposal can mention the Colombo team.
+    """
+    lkr = len(re.findall(r"\bLKR\b", flat))
+    aud = len(re.findall(r"\bAUD\b|\$\s?\d|\bGST\b", flat))
+    return "LK" if lkr and (lkr >= aud or re.search(r"\bSSCL\b", flat)) else None
+
+
+def _sscl_total(flat):
+    """(price excluding SSCL, SSCL) from a 'Total investment' that includes it, or None.
+
+    The Colombo Seven Gin proposal gives only milestone amounts, 'SSCL 2.5% 19,875.00'
+    and 'Total investment 100% 814,875.00'. The two only count when the levy really is
+    2.5% of what is left, so an unrelated total cannot be mistaken for one.
+    """
+    sscl = re.search(rf"\bSSCL\s*\(?2\.5\s?%\)?\s*\n?\s*(?:LKR\s*)?({NUMBER})", flat)
+    total = re.search(rf"total investment\s*\n?\s*(?:\d{{1,3}}\s?%\s*\n?\s*)?(?:LKR\s*)?({NUMBER})", flat, re.I)
+    if not (sscl and total):
+        return None
+    levy, gross = _amount(sscl.group(1)), _amount(total.group(1))
+    if levy and gross and gross > levy and abs((gross - levy) * 0.025 - levy) <= 1:
+        return gross - levy, levy
+    return None
+
+
+def _split(flat):
+    """The payment split as percentages, e.g. [40, 30, 30], or None.
+
+    Milestone amounts follow their percentage: '40% — LKR 204,360.00' in MILK, and a
+    table column '40% | 318,000.00' in Colombo Seven Gin. The first run of two to four
+    such percentages that adds up to exactly 100 is the split.
+    """
+    pcts = [int(m) for m in re.findall(rf"(?<!\d)(\d{{2}})\s?%\s*(?:[—–-]\s*)?\n?\s*(?:LKR\s*|\$)?(?:{NUMBER})",
+                                        flat)]
+    for i in range(len(pcts)):
+        for n in (2, 3, 4):
+            run = pcts[i:i + n]
+            if len(run) == n and sum(run) == 100 and min(run) >= 10:
+                return run
+    return None
+
 
 _COUNT_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7,
                 "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "fifteen": 15,
@@ -277,8 +327,14 @@ def extract(path):
     flat = re.sub(r"[ \t]+", " ", text)
     out, notes = {}, []
 
-    provider = json.load(open(f"{ROOT}/jurisdictions/AU.json"))["provider"]
-    own_abn = re.sub(r"\s", "", provider["abn"])
+    country = _country(flat) or "AU"
+    tax = TAX[country]
+    if country == "LK":
+        out["jurisdiction"] = _lo("LK")
+        notes.append("this is a Sri Lankan proposal (prices in LKR), so the contract is set to "
+                     "Sri Lanka: Encyte (Pvt) Ltd, in LKR with SSCL - check it")
+    provider = json.load(open(f"{ROOT}/jurisdictions/{country}.json"))["provider"]
+    own_abn = re.sub(r"\s", "", provider.get("abn", ""))
     own_name = provider["legal_name"].lower()
 
     # --- reference, e.g. 26-NGA-WD-062
@@ -317,7 +373,7 @@ def extract(path):
                      if m else "no proposal date found - enter the date on the proposal")
 
     # --- ABNs, ignoring your own
-    abns = re.findall(r"\b(\d{2}[ ]?\d{3}[ ]?\d{3}[ ]?\d{3})\b", flat)
+    abns = re.findall(r"\b(\d{2}[ ]?\d{3}[ ]?\d{3}[ ]?\d{3})\b", flat) if country == "AU" else []
     others = [a for a in abns if re.sub(r"\s", "", a) != own_abn]
     if others:
         out["client.abn"] = (_hi if len(set(others)) == 1 else _lo)(others[0])
@@ -342,7 +398,8 @@ def extract(path):
     # --- client legal name: a company/trust that is not you. Always a guess: a
     # wrong legal name in a signed contract is worse than an empty field.
     LABEL = r"^(?:client|prepared (?:by \S+ )?for|for|to|attention|company|entity)\s*:?\s+"
-    ents = re.findall(r"\b([A-Z][A-Za-z0-9&.,'\- ]{2,60}?(?:Pty Ltd|Pty\. Ltd\.|Limited|Ltd|Trust))\b", flat)
+    ents = re.findall(r"\b([A-Z][A-Za-z0-9&.,'\- ]{2,60}?(?:\((?:Pvt|Private)\) (?:Ltd|Limited)|"
+                      r"Pty Ltd|Pty\. Ltd\.|Limited|Ltd|Trust|PLC))(?:\b|(?<=\)))", flat)
     cands = []
     for e in ents:
         e = re.sub(LABEL, "", e.strip(" ,."), flags=re.I)
@@ -357,12 +414,16 @@ def extract(path):
         if len(cands) > 1:
             notes.append(f"possible client names: {', '.join(cands[:4])}")
     notes.append("the client's legal name, ABN and address are rarely in a proposal - "
-                 "check them against ABN Lookup (abr.business.gov.au) before building")
+                 "check them against ABN Lookup (abr.business.gov.au) before building"
+                 if country == "AU" else
+                 "the client's legal name, company registration number and address are rarely in "
+                 "a proposal - get them from the client before building")
 
     # --- money. Proposals state a standard price and what the client pays after
     # a discount; the form wants the standard price and the discount.
-    standard = _labelled(flat, r"standard (?:build )?(?:price|investment)(?: for this scope)?")
-    final = _labelled(flat, r"final investment|your investment|(?<!standard )\binvestment\b")
+    standard = _labelled(flat, r"standard (?:build )?(?:price|investment|fee)(?: for this scope)?")
+    final = _labelled(flat, r"net (?:project )?fee", r"subtotal before tax",
+                      r"final investment|your investment|(?<!standard )\binvestment\b")
     discount = _labelled(flat, r"discount[^\n$\d]{0,20}?less", r"less a")
     if standard and final and final < standard:
         out["fee.standard"] = _lo(standard)
@@ -371,19 +432,25 @@ def extract(path):
             notes.append(f"the stated discount ({discount:,.0f}) does not equal standard less "
                          f"final price ({standard - final:,.0f}) - check which is right")
         notes.append(f"price read as {standard:,.0f} standard less {standard - final:,.0f} "
-                     f"discount = {final:,.0f} excluding GST - check it against the proposal")
+                     f"discount = {final:,.0f} excluding {tax} - check it against the proposal")
     elif standard or final:
         out["fee.standard"] = _lo(standard or final)
-        notes.append(f"price read as {standard or final:,.0f} excluding GST, with no discount "
+        notes.append(f"price read as {standard or final:,.0f} excluding {tax}, with no discount "
                      f"found - check it against the proposal")
+    elif country == "LK" and _sscl_total(flat):
+        net, levy = _sscl_total(flat)
+        out["fee.standard"] = _lo(net)
+        notes.append(f"price read as {net:,.2f} excluding SSCL: the total investment less the "
+                     f"SSCL of {levy:,.2f} - check it against the proposal")
     else:
         amounts = [a for a in (_amount(m) for m in re.findall(MONEY, flat)) if a and a >= 500]
         if amounts:
             out["fee.standard"] = _lo(max(amounts))
-            notes.append("price is the largest dollar figure in the document - check it is the "
-                         "build price excluding GST, not a total including GST")
+            notes.append(f"price is the largest {'LKR' if country == 'LK' else 'dollar'} figure in the "
+                         f"document - check it is the build price excluding {tax}, not a total "
+                         f"including {tax}")
     price = out.get("fee.standard", {}).get("value")
-    if price is not None and price - out.get("fee.discount", {}).get("value", 0) < LOW_PRICE:
+    if price is not None and price - out.get("fee.discount", {}).get("value", 0) < LOW_PRICE[country]:
         notes.append(f"the price read as {price:,.0f} is unusually low for a build - the figure may be "
                      f"split or mistyped in the proposal, so enter it by hand")
     # An allowance inside the investment (plugins, licences) is an expense under
@@ -393,6 +460,17 @@ def extract(path):
         notes.append(f"the investment includes '{m.group(1).strip()}' of {_amount(m.group(2)):,.0f} - "
                      f"clause 5.0 charges plugins and licences at cost on top of the fee, so decide "
                      f"whether the ATP fee should leave the allowance out")
+
+    # --- payment split. Sri Lankan jobs vary it (MILK 40-30-30, Colombo Seven Gin
+    # 40-40-20), so it is read from the proposal and matched to a standard split.
+    split = _split(flat) if country == "LK" else None
+    if split:
+        name = "lk/milestones." + "-".join(map(str, split))
+        if os.path.exists(f"{ROOT}/presets/{name}.json"):
+            out["milestones"] = _lo(name)
+        else:
+            notes.append(f"the proposal splits payments {'-'.join(map(str, split))}, which is not a "
+                         f"standard split - pick the nearest, then edit the Word file")
 
     # --- duration
     m = re.search(r"\b(?:(\d{1,2})|(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve))"

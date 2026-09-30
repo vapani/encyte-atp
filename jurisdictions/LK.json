@@ -1,6 +1,10 @@
 {
  "code": "LK",
  "template": "atp-website-lk.docx",
+ "types": [
+  "website"
+ ],
+ "presets": "lk",
  "reviewed": [],
  "client_id": "reg_no",
  "provider": {
