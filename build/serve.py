@@ -145,15 +145,20 @@ def parse_upload(body, content_type):
 
 # --------------------------------------------------------------------------- page
 PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
-<title>New ATP</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Encyte ATP</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" type="image/png" href="__FAVICON__">
 <style>
 :root{--ink:#14181a;--mut:#5d6b73;--line:#dfe5e8;--bg:#f6f8f9;--card:#fff;
       --teal:#0c9476;--warn:#b26a00;--warnbg:#fff8ec;--err:#b3261e;--radius:10px}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-header{background:var(--ink);color:#fff;padding:18px 24px}
-header h1{margin:0;font-size:18px;font-weight:600;letter-spacing:.2px}
-header p{margin:4px 0 0;color:#9fb0b8;font-size:13px}
+header{background:#fff;border-bottom:3px solid var(--teal);padding:14px 16px}
+header .in{max-width:828px;margin:0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+header img{height:34px;width:auto;display:block}
+header .t{border-left:1px solid var(--line);padding-left:16px}
+header h1{margin:0;font-size:17px;font-weight:600;letter-spacing:.2px}
+header p{margin:2px 0 0;color:var(--mut);font-size:13px}
+@media(max-width:620px){header .t{border-left:none;padding-left:0}}
 main{max-width:860px;margin:24px auto 80px;padding:0 16px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:18px}
 .card h2{margin:0 0 4px;font-size:15px;font-weight:600}
@@ -194,8 +199,8 @@ button.lv{padding:5px 8px;font-size:13px;line-height:1;margin-right:2px}
 .field.bad input,.field.bad select,tr.bad input{border-color:var(--err);background:#fdf1f0}
 .bar{position:sticky;bottom:0;background:linear-gradient(transparent,var(--bg) 28%);padding:22px 0 10px;text-align:right}
 </style></head><body>
-<header><h1>New authorisation to proceed</h1>
-<p>Fields are checked before anything is built. Nothing leaves this computer.</p></header>
+<header><div class="in"><img src="__LOGO__" alt="Encyte">
+<div class="t"><h1>New authorisation to proceed</h1><p>__TAGLINE__</p></div></div></header>
 <main>
 
 <div class="card">
@@ -746,11 +751,27 @@ def country_data():
     return out
 
 
+def _data_uri(name):
+    """An image from build/static as a data: URI, so the page stays one self-contained response."""
+    import base64
+    with open(f"{ROOT}/build/static/{name}", "rb") as fh:
+        return "data:image/png;base64," + base64.b64encode(fh.read()).decode()
+
+
+LOGO, FAVICON = _data_uri("encyte-logo.png"), _data_uri("favicon.png")
+
+
 def render_page():
+    # Hosted, the form runs on Encyte's server, so "nothing leaves this computer" would be untrue.
+    local = os.environ.get("ATP_HOST", "127.0.0.1") in ("127.0.0.1", "localhost")
+    tagline = ("Fields are checked before anything is built. "
+               + ("Nothing leaves this computer." if local
+                  else "Uploaded proposals are read, then discarded."))
     options = "".join(f'<option value="{c}">{html.escape(f["label"])} &ndash; '
                       f'{html.escape(jurisdiction(c)["provider"]["legal_name"])}</option>'
                       for c, f in COUNTRY.items())
     return (PAGE
+            .replace("__LOGO__", LOGO).replace("__FAVICON__", FAVICON).replace("__TAGLINE__", tagline)
             .replace("__COUNTRY_OPTIONS__", options)
             .replace("__COUNTRIES__", json.dumps(country_data())))
 
