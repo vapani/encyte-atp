@@ -34,14 +34,13 @@
 
   "observability": {
     "enabled": true
-  },
-
-  // TEMPORARY: the form is open to anyone with the link. Chosen 29 Sep 2026 to get
-  // the fixed form live before a password is set. To close it: delete this block,
-  // run `npx wrangler secret put ATP_PASSWORD`, then `npx wrangler deploy`.
-  "vars": {
-    "ATP_AUTH": "off"
   }
+
+  // The form asks for the shared password in the ATP_PASSWORD secret (Asitha,
+  // 7 Oct 2026). It is a secret, never written here:
+  //   npx wrangler secret put ATP_PASSWORD
+  // Without it the Worker refuses to serve rather than fall open. To open the form
+  // to anyone with the link again, add "vars": { "ATP_AUTH": "off" }.
 
   // ATP_GITHUB_TOKEN is NOT set here. It is a secret:
   //   npx wrangler secret put ATP_GITHUB_TOKEN
