@@ -23,7 +23,6 @@
  "support_hours": "9.00 am to 5.30 pm, Monday to Friday, excluding mercantile holidays",
  "store_inclusion": "an online store: the Client’s products set up with payments through its payment gateway, and order notifications;",
  "defaults": {
-  "scope.exclusions": "copywriting (the Client supplies the content), photography, legal and compliance review, ongoing search engine optimisation and marketing, and integrations with other systems",
-  "scope.store_products": 50
+  "scope.exclusions": "copywriting (the Client supplies the content), photography, legal and compliance review, ongoing search engine optimisation and marketing, and integrations with other systems"
  }
 }

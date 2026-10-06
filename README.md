@@ -69,8 +69,10 @@ everything that depends on it:
 provider account to the items the client holds and pays for, an online store line to *What's
 included*, and clause 3.8 Online store: payments through the client's own Stripe, Square or
 PayPal account, card details held by the provider and never stored by the site, products,
-prices and terms of sale supplied by the client, and orders and refunds run by the client. By
-Asitha's decision (30 September 2026) it is issued now and reviewed with the rest later.
+prices and terms of sale supplied by the client, and orders and refunds run by the client. We
+enter up to *Products we add* products (50 unless changed, `scope.store_products`), and more
+are added by the client or quoted. By Asitha's decision (30 September 2026) it is issued now and
+reviewed with the rest later.
 
 Anything you've already edited stays when you switch. A proposal upload suggests the type:
 it picks *Web app* when the proposal talks about a platform, portal or dashboards far more
@@ -197,6 +199,11 @@ Computed from `fee.standard`, `fee.discount` and `milestones[].percent`:
 `fee.total` · `fee.tax` · `fee.total_inc` · every milestone amount ex and inc tax · the totals row.
 The last milestone absorbs rounding so the column always sums to the total exactly.
 
+Words that differ by type are derived too, so the template says them once: `{{ready_for}}`
+("review" for a website, "UAT" for an app, matching the payment that falls due then),
+`{{pages_word}}` ("pages" or "screens") and `{{deliverable.short}}` ("app" for a web and
+mobile app, so 3.4 says "a reference app").
+
 **The payment split is stated in exactly one place.** This is the failure that broke the
 Acentura ATP — 30/40/30 in clause 2.3 and 40/20/20 in clause 4.0, because it was typed twice.
 
@@ -246,10 +253,11 @@ mobile app" in a web and mobile app).
 | 2.3 held items | three (four with a store) | three | four (adds developer accounts) | four |
 | 2.3 support | browsers | browsers | `scope.devices` | browsers for the web app, `scope.devices` for the mobile app |
 | 2.3 results | search and traffic | security, performance; no promise of error-free software | same as web app | same |
+| 3.4 rounds | two design rounds, two feedback rounds | two design rounds, and feedback on every testing release within scope | same | same |
 | 3.5 | – | defect severity: start within 1 / 3 business days | same | same |
-| 3.6 | Acceptance | User acceptance testing (UAT): criteria per feature agreed before development, the client's testers and data, a separate testing environment; only critical and major defects hold up sign-off | same | same |
-| 3.7 Handover | platform admin, site transfer | admin area, repository transfer, documentation | same | same |
-| 3.8 | Online store, when ticked | Environments and source code: ours until handover; production in client's accounts; permissive licences only | same | same |
+| 3.6 | Acceptance, from "ready for review" | User acceptance testing (UAT), from "ready for UAT": criteria per feature agreed before development, the client's testers and data, in the browsers and a testing environment; only critical and major defects hold up sign-off, and minor ones are fixed before the support period ends | same, on the client's devices through TestFlight and Google Play testing | both, each its own way |
+| 3.7 Handover | platform admin; site transferred once paid | admin area, documentation; repository transferred once paid | same | same |
+| 3.8 | Online store, when ticked | Environments and source code: ours until handover; production and daily backups in client's accounts, the backups the client's once support ends; permissive licences only | same | same |
 | 3.9 Third-party services and platform changes | – | provider changes are a change; new OS/browser versions are not a defect | same | same |
 | 3.10 App store release | – | – | client's developer accounts; rejection split by fault; acceptance does not wait for store review | same, for the mobile app |
 

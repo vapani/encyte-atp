@@ -247,6 +247,8 @@ button.lv{padding:5px 8px;font-size:13px;line-height:1;margin-right:2px}
   <div class="field full" id="store-field"><label style="font-weight:400">
     <input type="checkbox" id="online_store" style="width:auto;margin:0 8px 0 0;vertical-align:-2px">
     <strong>Includes an online store</strong> &ndash; <span id="store-text"></span></label></div>
+  <div class="field" id="products-field" style="display:none"><label>Products we add</label>
+    <input id="scope.store_products" value="50"><div class="hint" style="margin:4px 0 0">more are added by the client, or quoted</div></div>
   <div class="field full" id="devices-field" style="display:none"><label>Devices and operating systems</label>
     <input id="scope.devices" placeholder="e.g. iPhones running iOS 17 or later and Android phones running Android 10 or later"><div class="badge">check this</div></div>
   <div class="field full"><label>What is <em>not</em> included</label>
@@ -403,6 +405,7 @@ function applyType(t, init, std){
   $('devices-field').style.display = (t === 'mobile_app' || t === 'web_mobile_app') ? '' : 'none';
   $('store-field').style.display = t === 'website' ? '' : 'none';     // stores are a website option
   if(t !== 'website') $('online_store').checked = false;
+  showProducts();
   $('draftnote').style.display = T.draft ? '' : 'none';
   $('draftwhy').textContent = COUNTRIES[country].draft_why;
   $('scope.platform').placeholder = T.platform_hint;
@@ -441,6 +444,9 @@ function applyCountry(c, init){
   // the other country's payment splits do not exist here, so the split always resets
   applyType(TYPES[current] ? current : 'website', init, {...std, split: true});
 }
+// The number of products we enter is part of the store clause, so ask only for a store.
+function showProducts(){ $('products-field').style.display = $('online_store').checked ? '' : 'none'; }
+$('online_store').onchange = showProducts;
 applyCountry('AU', true);
 $('atp.date').value = new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'});
 
@@ -533,6 +539,7 @@ $('go').onclick = async () => {
                      + ' - ' + half.length + (half.length === 1 ? ' row is' : ' rows are') + ' incomplete'], []);
   }
   data.online_store = $('online_store').checked;
+  data['scope.store_products'] = $('scope.store_products').value.trim();
   data.pages = rows
       .map(tr => [tr.querySelector('.pn').value.trim(), tr.querySelector('.pp').value.trim(),
                   Number(tr.dataset.level || 0)])
@@ -657,6 +664,8 @@ def friendly(err):
         return "Add at least one feature, with its description", []
     if "is not a" in err and "preset" in err:
         return "The 'What's included' list does not match the contract type - pick one for this type", ["scope.inclusions"]
+    if "store_products" in err:
+        return "Products we add should be a whole number, e.g. 50", ["scope.store_products"]
     if "discount exceeds" in err:
         return "The discount is more than the standard price", ["fee.standard", "fee.discount"]
     if "price is $0" in err:
@@ -691,7 +700,7 @@ COUNTRY = {
            "support": ["3", "months"], "plan_price": False, "hosting": False, "desc_required": False,
            "low_price": 50000,
            "store": "payments through PayHere, WebXPay or a bank gateway. Adds an online store "
-                    "clause (3.6), with up to 50 products entered.",
+                    "clause (3.6).",
            "draft_why": "The Sri Lankan terms are waiting for approval.",
            "price_hint": "e.g. 630000", "name_hint": "e.g. Acme (Private) Limited",
            "address_hint": "e.g. No. 10, Sample Road, Colombo 03"},
@@ -874,6 +883,9 @@ class Handler(BaseHTTPRequestHandler):
                 eng["scope"]["devices"] = d.get("scope.devices", "")
             if etype == "website" and d.get("online_store"):
                 eng["scope"]["online_store"] = True
+                # a whole number, or left as typed so the build says what is wrong with it
+                raw = str(d.get("scope.store_products", "")).strip()
+                eng["scope"]["store_products"] = int(raw) if raw.isdigit() else (raw or 50)
         except Exception as e:
             return self._send(200, json.dumps({"errors": [f"could not read the form: {e}"]}))
 

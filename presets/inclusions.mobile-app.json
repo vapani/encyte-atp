@@ -3,6 +3,7 @@
  "the {{deliverable}} built for the devices set out in section 2.3;",
  "test builds through TestFlight and Google Play’s testing tracks, so you can try the {{deliverable}} on your own phone during the build;",
  "any server or cloud back end the features in section 2.2 need, set up in accounts in your name as described in section 3.8;",
+ "automated daily backups of any production database, set up in your own accounts;",
  "analytics and crash reporting set up in your own accounts;",
  "store listings and submission of the first release, as described in section 3.10;",
  "technical documentation covering how the {{deliverable}} is built, configured and deployed."

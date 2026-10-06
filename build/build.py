@@ -72,6 +72,7 @@ MOBILE_TYPES = ("mobile_app", "web_mobile_app")
 DEFAULTS = {
     "terms.payment_days": 14,
     "hosting.note": "",
+    "scope.store_products": 50,     # products we enter for an online store; more are quoted
 }
 
 TYPE_DEFAULTS = {
@@ -249,6 +250,10 @@ def validate(eng, jur):
                         f"{'page' if level == 1 else 'subpage'} above it")
         prev = level
     if not eng["scope"].get("inclusions"): errs.append("scope.inclusions is empty")
+    if "online_store" in options_on(eng):
+        n = eng["scope"].get("store_products")
+        if not (isinstance(n, int) and not isinstance(n, bool) and n > 0):
+            errs.append(f"scope.store_products must be a whole number of products, not {n!r}")
     if not eng["timeline"].get("tasks"): errs.append("timeline.tasks is empty")
     return errs
 
@@ -269,6 +274,14 @@ def derive(eng, jur):
     # "a website" but "an app" - the article has to follow the noun
     d["deliverable.article"] = "an" if d["deliverable"][:1].lower() in "aeiou" else "a"
     d["store_app"] = STORE_APP.get(eng.get("engagement_type"), d["deliverable"])
+    # Words that differ by type. Payment 3 of an app falls due when the build is ready
+    # for UAT, so 3.6 starts the testing clock with the same words; an app has screens,
+    # not pages; and "a reference web and mobile app" reads better as "a reference app".
+    app = eng.get("engagement_type") in ("web_app", "mobile_app", "web_mobile_app")
+    d["ready_for"] = "UAT" if app else "review"
+    d["pages_word"] = "screens" if app else "pages"
+    d["deliverable.short"] = ("app" if eng.get("engagement_type") == "web_mobile_app"
+                              and not eng.get("deliverable") else d["deliverable"])
     # 2.3 lists what the client holds and pays for: photography, domain and hosting,
     # plus the app store accounts and a payment provider account where they apply
     held = 3 + (eng.get("engagement_type") in MOBILE_TYPES) + ("online_store" in options_on(eng))
