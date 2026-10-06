@@ -353,8 +353,7 @@ def extract(path):
             label = {"web_app": "a web app", "mobile_app": "a mobile app",
                      "web_mobile_app": "a web and mobile app"}[kind]
             notes.append(f"this looks like {label} proposal - {why} - so the contract type is set to "
-                         f"{label[2:] if label.startswith('a ') else label}. Check it, and note that app "
-                         f"contracts are drafts until the app terms are legally reviewed")
+                         f"{label[2:] if label.startswith('a ') else label}. Check it")
 
     # --- the proposal date, written as 8 September 2026. Only the cover, or a date
     # labelled 'dated', counts: the body quotes other dates - the Ciro's proposal

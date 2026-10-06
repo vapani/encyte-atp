@@ -693,7 +693,7 @@ COUNTRY = {
            "low_price": 500,        # below this the form asks before building; see build_in()
            "store": "payments through Stripe, Square or PayPal. Adds the payment provider account "
                     "and an online store clause (3.8).",
-           "draft_why": "The web app and mobile app terms have not been legally reviewed yet.",
+           "draft_why": "These terms have not been approved for issue yet.",
            "price_hint": "e.g. 9500", "name_hint": "e.g. Acme Holdings Pty Ltd",
            "address_hint": "e.g. 12 Example St, Richmond VIC 3121"},
     "LK": {"label": "Sri Lanka", "adjective": "Sri Lankan", "splits_default": {"website": "lk/milestones.30-40-30"},

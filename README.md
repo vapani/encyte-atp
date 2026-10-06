@@ -263,20 +263,18 @@ mobile app" in a web and mobile app).
 
 New clauses are numbered after 3.7, so no existing clause number or cross-reference moves.
 
-**The app clauses have not been legally reviewed.** `REVIEWED` in `build/build.py` lists the
-types that may be issued, and it holds only `website`. An app build refuses unless you pass
-`--draft`. The draft then carries *DRAFT FOR LEGAL REVIEW – NOT FOR ISSUE* in red in the header
-on every page:
+**App contracts are issued as drafted.** Asitha confirmed the six app defaults on 7 October
+2026, so `REVIEWED` in `build/build.py` lists every type and the form issues app contracts
+normally. Like the website wording, they are legally reviewed later, and any change goes into
+the template. A type left out of `REVIEWED` builds only with `--draft`, and carries *DRAFT FOR
+LEGAL REVIEW – NOT FOR ISSUE* in red in the header on every page:
 
 ```
 python3 build/build.py engagements/sample-mobile-app.json ~/Downloads/ATP-DRAFT-Mobile.docx --draft
 ```
 
-The browser form offers all three types, and builds web app and mobile app contracts as marked
-drafts, so a draft can be produced for legal review but not issued by mistake. `new.py`
-still offers websites only. Adding a type to `REVIEWED` is the record that a lawyer has read
-its clauses, so do it in a commit of its own. From then on the form issues that type
-normally, with no other change.
+Adding a type to `REVIEWED` is the record that it was approved for issue, so do it in a
+commit of its own. The form then issues that type with no other change.
 
 **Engagement data for apps.** `scope.features` replaces `scope.pages`, with the same
 `[name, description]` rows. `scope.platform` has no default, because the stack is a decision
@@ -291,7 +289,7 @@ and `sample-web-mobile-app.json`. A website's online store is `"online_store": t
 work-plan preset that belongs to another type. Milestone splits are shared.
 `milestones.20-30-30-20` was added for longer builds.
 
-### Before an app ATP is issued
+### Still open for app contracts
 
 - **Legal review** of the app blocks listed above. The text to send is the output of
   `python3 build/docxtext.py` on a `--draft` build.
@@ -338,12 +336,13 @@ for SSCL, so 2.5% is added and shown separately. There is no GST or VAT.
 
 - **Website only so far**, with the online store option (3.6, with PayHere, WebXPay or a
   bank as the gateway, and up to `scope.store_products` products entered, 50 by default).
-  The app types follow once the website wording is approved.
-- **Draft until approved.** `reviewed` is empty, so every Sri Lankan build is marked
-  *DRAFT FOR LEGAL REVIEW – NOT FOR ISSUE*. Adding `"website"` to it is the approval.
-- **Placeholders.** A fact still to come is written `[... – to confirm]`, such as the body
-  in 18.4 that appoints a mediator. The build highlights each one and lists it, and
-  refuses to issue a contract that still has one.
+  The app types are next.
+- **Approved.** Asitha approved the website wording on 7 October 2026, so `reviewed`
+  lists `website` and Sri Lankan website contracts are issued normally. 18.4 names the
+  CCC-ICLP International ADR Center to appoint a mediator if the parties cannot agree.
+- **Placeholders.** A fact still to come is written `[... – to confirm]`. The build
+  highlights each one and lists it, and refuses to issue a contract that still has one.
+  The Sri Lankan template has none left.
 - **Presets** live in `presets/lk/` and are named `preset:lk/...`: the inclusions, the
   eight-week plan (5 business days of testing in week 7) and the 30-40-30, 40-30-30 and
   40-40-20 splits. The final payment is always on acceptance under 3.4.

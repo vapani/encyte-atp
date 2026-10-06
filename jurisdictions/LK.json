@@ -5,7 +5,9 @@
   "website"
  ],
  "presets": "lk",
- "reviewed": [],
+ "reviewed": [
+  "website"
+ ],
  "client_id": "reg_no",
  "provider": {
   "legal_name": "Encyte (Pvt) Ltd",

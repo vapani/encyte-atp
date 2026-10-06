@@ -26,11 +26,13 @@ TYPES = ("website", "web_app", "mobile_app", "web_mobile_app")
 # ("online_store": true). Block names may be a type or an option: {{?online_store}}.
 OPTIONS = {"online_store": ("website",)}      # option -> the types it applies to
 
-# Types whose wording has been legally reviewed and can be issued. Anything else
-# builds only with --draft, and the header says so on every page. Adding a type
-# here is the record that its clauses were reviewed - do it in its own commit.
-# A jurisdiction pack with its own template lists its own ("reviewed": [...]).
-REVIEWED = {"website"}
+# Types approved for issue. Anything else builds only with --draft, and the header
+# says so on every page. Contracts are issued as drafted and legally reviewed later
+# (Asitha, 30 September 2026); a type is added here once its open terms are settled -
+# the app types when the six app defaults were confirmed, 7 October 2026. Do it in a
+# commit of its own. A jurisdiction pack with its own template lists its own
+# ("reviewed": [...]).
+REVIEWED = {"website", "web_app", "mobile_app", "web_mobile_app"}
 
 def reviewed(jur):
     return set(jur.get("reviewed", REVIEWED))
@@ -461,7 +463,7 @@ def build(engagement_file, out_file, draft=False):
     errs = validate(eng, jur)
     etype = eng.get("engagement_type")
     if etype in TYPES and etype not in reviewed(jur) and not draft:
-        errs.append(f"the {etype} clauses have not been legally reviewed, so this cannot be "
+        errs.append(f"the {etype} clauses have not been approved for issue, so this cannot be "
                     f"issued - build a review copy with --draft")
     if errs:
         print("VALIDATION FAILED"); [print("  -", e) for e in errs]; sys.exit(1)
@@ -529,7 +531,7 @@ def build(engagement_file, out_file, draft=False):
 
     print(f"built -> {out_file}")
     if etype not in reviewed(jur):
-        print(f"  DRAFT - the {etype} clauses are not legally reviewed. Marked in the header; not for issue.")
+        print(f"  DRAFT - the {etype} clauses are not approved for issue. Marked in the header; not for issue.")
     print(f"  {listed} {len(eng['scope'][listed])} · milestones {len(d['_milestone_rows'])} · tasks {len(eng['timeline']['tasks'])}")
     opts = ", ".join(sorted(options_on(eng))) or "none"
     print(f"  type {eng.get('engagement_type')} · options {opts} · deliverable '{d['deliverable']}' · blocks kept {kept}, cut {cut}")
