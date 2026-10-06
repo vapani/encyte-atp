@@ -95,20 +95,11 @@ client, or both) and the week. The form shows which week the plan runs to. The b
 refuses a plan longer than the Duration, and a row with no week number, which would
 otherwise slip past that check. It also refuses a payment split that names a week the plan
 doesn't reach. 20-40-40 says *on acceptance (Week 8)*, so a seven-week job needs 30-40-30
-or 50-50. The terminal wizard still uses the work plan presets.
+or 50-50.
 
 A build that fails validation leaves nothing behind. A build that succeeds writes
 `engagements/<client>.json`, which is the record of that deal - commit it.
 
-There is also a terminal version if you prefer it:
-
-```
-python3 build/new.py
-```
-
-It asks for the client details, references, scope, fee, timeline and support, then
-writes `engagements/<client>.json` and offers to build the ATP straight away. Press
-Enter to accept anything shown in brackets. Ctrl-C at any point writes nothing.
 
 What it protects you from:
 
@@ -303,8 +294,7 @@ work-plan preset that belongs to another type. Milestone splits are shared.
 
 1. An annexure mechanism for an SLA schedule and a Data Processing Addendum.
 2. `engagement.model`: fixed price, phased, or time and materials with a cap.
-3. App types in `new.py`. The browser form already has them, as drafts.
-4. Reading an app proposal's features. The Business Marketplace proposal has a clean
+3. Reading an app proposal's features. The Business Marketplace proposal has a clean
    *Area | Purpose* table that could fill the feature rows, descriptions included.
 
 ## Adding a jurisdiction
@@ -354,7 +344,7 @@ for SSCL, so 2.5% is added and shown separately. There is no GST or VAT.
   number instead of an ABN, and prices excluding SSCL. There is no care plan price or
   hosting note, and page purposes are optional, because Sri Lankan proposals list pages by
   name. Only Website is offered until the app types have a Sri Lankan template (`types` in
-  the pack). The terminal wizard stays Australian.
+  the pack).
 
 
 ## Known gaps — deliberately not in the template
