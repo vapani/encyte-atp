@@ -79,8 +79,7 @@ it picks *Web app* when the proposal talks about a platform, portal or dashboard
 than a website, *Mobile app* when it keeps mentioning iOS, Android or the app stores, and
 *Web and mobile app* when it describes a "mobile and web application".
 **App contracts of all three kinds come out as drafts** (see below): marked *DRAFT FOR LEGAL
-REVIEW – NOT FOR ISSUE* on every page, named `ATP-DRAFT-…`, and not recorded as issued
-engagements.
+REVIEW – NOT FOR ISSUE* on every page, named `ATP-DRAFT-…`.
 
 **Pages are editable rows**, not a preset, because every project differs. They appear
 in the contract exactly as typed. The **›** button makes a row a subpage of the page above
@@ -97,8 +96,9 @@ otherwise slip past that check. It also refuses a payment split that names a wee
 doesn't reach. 20-40-40 says *on acceptance (Week 8)*, so a seven-week job needs 30-40-30
 or 50-50.
 
-A build that fails validation leaves nothing behind. A build that succeeds writes
-`engagements/<client>.json`, which is the record of that deal - commit it.
+A build that fails validation leaves nothing behind. A build that succeeds downloads the
+contract to your computer, and for now that downloaded copy is the record: nothing else is
+saved (7 October 2026). Saving a copy to SharePoint is planned.
 
 
 What it protects you from:

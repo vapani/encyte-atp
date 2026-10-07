@@ -50,35 +50,21 @@ def slugify(s):
 
 
 def record_engagement(eng, slug):
-    """Keep the engagement file as the record of what was issued.
+    """Keep a copy of what was issued, when somewhere to keep it is configured.
 
-    Locally that means writing into engagements/ for you to commit. Hosted, the
-    container filesystem does not survive a restart, so with ATP_GITHUB_TOKEN set
-    it commits to the repository instead - the same audit trail, next to the
-    template version that produced the document.
+    For now nothing is: the contract downloads to the person's computer and that
+    copy is the record (Asitha, 7 October 2026). Saving to SharePoint is planned.
+    Until then this returns None, and the form says nothing about records.
 
-    Returns (ok, message). Never raises: a contract that has been generated
-    should still reach the person who asked for it, but they must be told the
-    record did not save.
+    With ATP_GITHUB_TOKEN set it commits the engagement file to the repository,
+    an earlier plan kept for reference. Returns None, or (ok, message). Never
+    raises: a contract that has been generated should still reach the person who
+    asked for it, but they must be told if a configured record did not save.
     """
     blob = json.dumps(eng, indent=1, ensure_ascii=False) + "\n"
     token = os.environ.get("ATP_GITHUB_TOKEN")
-
     if not token:
-        # Hosted, the container's disk is wiped whenever it sleeps, so a file
-        # written there is not a record. Say so rather than report success.
-        if os.environ.get("ATP_HOST", "127.0.0.1") not in ("127.0.0.1", "localhost"):
-            return False, ("this server has no ATP_GITHUB_TOKEN, so there is nowhere permanent "
-                           "to keep the record - keep the downloaded contract, and set the token "
-                           "so future records are committed")
-        try:
-            path = os.path.join(os.environ.get("ATP_ENGAGEMENTS", f"{ROOT}/engagements"),
-                                f"{slug}.json")
-            os.makedirs(os.path.dirname(path), exist_ok=True)
-            open(path, "w").write(blob)
-            return True, f"written to engagements/{slug}.json - commit it"
-        except OSError as e:
-            return False, f"could not write the engagement record: {e}"
+        return None
 
     import base64, urllib.request, urllib.error
     repo = os.environ.get("ATP_GITHUB_REPO", "vapani/encyte-atp")
@@ -949,18 +935,17 @@ class Handler(BaseHTTPRequestHandler):
             finally:
                 sys.stdout = real
 
-        # It built, so record what was issued. A draft is not issued, so it is not recorded.
-        if draft:
-            recorded, record_msg = True, "draft for legal review - not recorded, because drafts are not issued"
-        else:
-            recorded, record_msg = record_engagement(eng, slug)
-        print(f"  record: {record_msg}")
+        # It built. A copy is kept only where a store is configured, and never for a
+        # draft, which is not issued. Otherwise the download is the record.
+        record = None if draft else record_engagement(eng, slug)
+        if record:
+            print(f"  record: {record[1]}")
 
         data = open(out, "rb").read()
         self._send(200, data,
                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                    {"X-Filename": os.path.basename(out),
-                    "X-Record": ("ok " if recorded else "FAILED ") + record_msg,
+                    **({"X-Record": ("ok " if record[0] else "FAILED ") + record[1]} if record else {}),
                     **({"X-Draft": "1"} if draft else {}),
                     "Content-Disposition": f'attachment; filename="{os.path.basename(out)}"'})
 
