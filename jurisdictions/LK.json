@@ -2,12 +2,13 @@
  "code": "LK",
  "template": "atp-website-lk.docx",
  "types": [
-  "website"
+  "website",
+  "web_app",
+  "mobile_app",
+  "web_mobile_app"
  ],
  "presets": "lk",
- "reviewed": [
-  "website"
- ],
+ "reviewed": [],
  "client_id": "reg_no",
  "provider": {
   "legal_name": "Encyte (Pvt) Ltd",
@@ -26,5 +27,16 @@
  "store_inclusion": "an online store: the Client’s products set up with payments through its payment gateway, and order notifications;",
  "defaults": {
   "scope.exclusions": "copywriting (the Client supplies the content), photography, legal and compliance review, ongoing search engine optimisation and marketing, and integrations with other systems"
+ },
+ "type_defaults": {
+  "web_app": {
+   "scope.exclusions": "copywriting (the Client supplies the content), legal and compliance review, data migration from existing systems, integrations not listed in section 2.2, native mobile apps, and marketing campaigns"
+  },
+  "mobile_app": {
+   "scope.exclusions": "copywriting (the Client supplies the content), legal and compliance review, data migration from existing systems, integrations not listed in section 2.2, a web version of the app, app store optimisation, and marketing campaigns"
+  },
+  "web_mobile_app": {
+   "scope.exclusions": "copywriting (the Client supplies the content), legal and compliance review, data migration from existing systems, integrations not listed in section 2.2, app store optimisation, and marketing campaigns"
+  }
  }
 }

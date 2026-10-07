@@ -1,0 +1,77 @@
+[
+ [
+  "Kick-off meeting and requirements capture",
+  "{{provider.short_name}} / {{client.short_name}}",
+  "Week 1"
+ ],
+ [
+  "Apple and Google developer accounts opened in the Client’s name (Apple can take two weeks for a company)",
+  "{{client.short_name}}",
+  "Weeks 1–2"
+ ],
+ [
+  "Content, brand files and access to the Client’s accounts provided",
+  "{{client.short_name}}",
+  "Week 1"
+ ],
+ [
+  "User flows and wireframes for web and mobile, for review",
+  "{{provider.short_name}}",
+  "Weeks 2–3"
+ ],
+ [
+  "Wireframe feedback",
+  "{{client.short_name}}",
+  "Week 4"
+ ],
+ [
+  "Visual design of the key web and mobile screens, for review",
+  "{{provider.short_name}}",
+  "Weeks 4–5"
+ ],
+ [
+  "Design freeze – the Client approves the look",
+  "{{client.short_name}}",
+  "Week 6"
+ ],
+ [
+  "Acceptance criteria agreed for each feature",
+  "{{provider.short_name}} / {{client.short_name}}",
+  "Week 6"
+ ],
+ [
+  "Development, with a testing release every two weeks",
+  "{{provider.short_name}}",
+  "Weeks 7–13"
+ ],
+ [
+  "Feedback on each testing release",
+  "{{client.short_name}}",
+  "Weeks 8–13"
+ ],
+ [
+  "Store listing text, screenshots and privacy details approved",
+  "{{client.short_name}}",
+  "Week 12"
+ ],
+ [
+  "Complete build ready for user acceptance testing (UAT)",
+  "{{provider.short_name}}",
+  "Week 13"
+ ],
+ [
+  "UAT of the web app and the mobile app, then sign-off",
+  "{{client.short_name}}",
+  "Weeks 14–15"
+ ],
+ [
+  "Web app go-live and submission to the App Store and Google Play",
+  "{{provider.short_name}}",
+  "Week 16"
+ ],
+ [
+  "Handover session, documentation and administrator access",
+  "{{provider.short_name}}",
+  "Week 16"
+ ]
+]

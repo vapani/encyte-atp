@@ -696,12 +696,15 @@ COUNTRY = {
            "draft_why": "These terms have not been approved for issue yet.",
            "price_hint": "e.g. 9500", "name_hint": "e.g. Acme Holdings Pty Ltd",
            "address_hint": "e.g. 12 Example St, Richmond VIC 3121"},
-    "LK": {"label": "Sri Lanka", "adjective": "Sri Lankan", "splits_default": {"website": "lk/milestones.30-40-30"},
+    "LK": {"label": "Sri Lanka", "adjective": "Sri Lankan",
+           "splits_default": {"website": "lk/milestones.30-40-30", "web_app": "lk/milestones.20-30-30-20",
+                              "mobile_app": "lk/milestones.20-30-30-20",
+                              "web_mobile_app": "lk/milestones.20-30-30-20"},
            "support": ["3", "months"], "plan_price": False, "hosting": False, "desc_required": False,
            "low_price": 50000,
            "store": "payments through PayHere, WebXPay or a bank gateway. Adds an online store "
                     "clause (3.6).",
-           "draft_why": "The Sri Lankan terms are waiting for approval.",
+           "draft_why": "These Sri Lankan terms are waiting for approval.",
            "price_hint": "e.g. 630000", "name_hint": "e.g. Acme (Private) Limited",
            "address_hint": "e.g. No. 10, Sample Road, Colombo 03"},
 }

@@ -1,0 +1,10 @@
+[
+ "the features listed in section 2.2, across the web app and the mobile app;",
+ "the web app built for the browsers, and the mobile app for the devices, set out in section 2.3;",
+ "a testing environment for the web app, and test builds of the mobile app through TestFlight and Google Play’s testing tracks;",
+ "set-up of the production environment and any back end in accounts in the Client’s name, as described in section 3.6;",
+ "automated daily backups of the production database, set up in the Client’s own accounts;",
+ "analytics, error reporting and crash reporting set up in the Client’s own accounts;",
+ "store listings and submission of the first mobile release, as described in section 3.8;",
+ "technical documentation covering how the {{deliverable}} is built, configured and deployed."
+]

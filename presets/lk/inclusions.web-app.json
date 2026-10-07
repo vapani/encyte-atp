@@ -1,0 +1,9 @@
+[
+ "the features listed in section 2.2;",
+ "layouts that work on desktop, tablet and mobile screens;",
+ "a testing environment where the Client can try each release before it goes live;",
+ "set-up of the production environment in accounts in the Client’s name, as described in section 3.6;",
+ "automated daily backups of the production database, set up in the Client’s own accounts;",
+ "analytics and error reporting set up in the Client’s own accounts;",
+ "technical documentation covering how the {{deliverable}} is built, configured and deployed."
+]

@@ -129,8 +129,9 @@ def preset_mismatches(eng):
 def load(engagement_file):
     eng = json.load(open(engagement_file))
     jur = json.load(open(f"{ROOT}/jurisdictions/{eng['jurisdiction']}.json"))
-    for k, v in {**DEFAULTS, **TYPE_DEFAULTS.get(eng.get("engagement_type"), {}),
-                 **jur.get("defaults", {})}.items():
+    etype = eng.get("engagement_type")
+    for k, v in {**DEFAULTS, **TYPE_DEFAULTS.get(etype, {}),
+                 **jur.get("defaults", {}), **jur.get("type_defaults", {}).get(etype, {})}.items():
         put(eng, k, v)
     eng["_preset_mismatches"]  = preset_mismatches(eng)   # checked before resolve() erases the names
     eng["milestones"]          = resolve(eng["milestones"])

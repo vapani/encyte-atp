@@ -1,0 +1,30 @@
+[
+ [
+  "Sign-in and accounts",
+  "One account for the web app and the mobile app, with password reset and account deletion"
+ ],
+ [
+  "Admin dashboard (web)",
+  "Manage users, content and settings"
+ ],
+ [
+  "Records (web and mobile)",
+  "Create, view and edit the main records the business works with"
+ ],
+ [
+  "Home (mobile)",
+  "The main screen a signed-in user lands on"
+ ],
+ [
+  "Push notifications (mobile)",
+  "Sent for the events set out in the acceptance criteria"
+ ],
+ [
+  "Email notifications (web)",
+  "Sent for the events set out in the acceptance criteria"
+ ],
+ [
+  "Legal",
+  "Privacy policy and terms supplied by the Client, linked from both apps and the store listings"
+ ]
+]

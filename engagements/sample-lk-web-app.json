@@ -1,0 +1,42 @@
+{
+ "jurisdiction": "LK",
+ "engagement_type": "web_app",
+ "atp": {
+  "date": "30 September 2026",
+  "ref": "26-EXL-WA-083"
+ },
+ "proposal": {
+  "ref": "26-EXL-WA-082",
+  "date": "22 September 2026"
+ },
+ "client": {
+  "legal_name": "Example Lanka (Private) Limited",
+  "reg_no": "PV00000",
+  "address": "No. 10, Sample Road, Colombo 03, Sri Lanka",
+  "short_name": "Example Lanka",
+  "contact_name": "Sample Contact"
+ },
+ "project": {
+  "name": "Example Lanka client portal"
+ },
+ "scope": {
+  "inclusions": "preset:lk/inclusions.web-app",
+  "features": "preset:lk/features.web-app-starter",
+  "platform": "Laravel and Vue"
+ },
+ "fee": {
+  "standard": 2800000,
+  "discount": 0
+ },
+ "milestones": "preset:lk/milestones.20-30-30-20",
+ "timeline": {
+  "duration": "Twelve weeks",
+  "tasks": "preset:lk/workplan.web-app-12week"
+ },
+ "support": {
+  "included": {
+   "value": 3,
+   "unit": "months"
+  }
+ }
+}

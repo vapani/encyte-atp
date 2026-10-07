@@ -1,0 +1,30 @@
+[
+ [
+  "Onboarding",
+  "Welcome screens, and permission requests explained in plain language"
+ ],
+ [
+  "Sign-in and accounts",
+  "Email sign-in, password reset, and account deletion from inside the app"
+ ],
+ [
+  "Home",
+  "The main screen a signed-in user lands on"
+ ],
+ [
+  "Push notifications",
+  "Sent for the events set out in the acceptance criteria"
+ ],
+ [
+  "Profile and settings",
+  "Update details and notification preferences"
+ ],
+ [
+  "Admin panel",
+  "A web page for managing users and content"
+ ],
+ [
+  "Legal",
+  "Privacy policy and terms supplied by the Client, linked from the app and the store listings"
+ ]
+]

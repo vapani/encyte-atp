@@ -1,0 +1,18 @@
+[
+ {
+  "percent": 20,
+  "description": "20% of the total project fee, an advance under section 4.0, due on signing this Agreement."
+ },
+ {
+  "percent": 30,
+  "description": "30% of the total project fee upon design freeze."
+ },
+ {
+  "percent": 30,
+  "description": "30% of the total project fee when the complete build is ready for user acceptance testing (UAT)."
+ },
+ {
+  "percent": 20,
+  "description": "20% of the total project fee upon acceptance of the {{deliverable}} under section 3.4."
+ }
+]

@@ -1,0 +1,43 @@
+{
+ "jurisdiction": "LK",
+ "engagement_type": "mobile_app",
+ "atp": {
+  "date": "30 September 2026",
+  "ref": "26-EXL-MA-085"
+ },
+ "proposal": {
+  "ref": "26-EXL-MA-084",
+  "date": "22 September 2026"
+ },
+ "client": {
+  "legal_name": "Example Lanka (Private) Limited",
+  "reg_no": "PV00000",
+  "address": "No. 10, Sample Road, Colombo 03, Sri Lanka",
+  "short_name": "Example Lanka",
+  "contact_name": "Sample Contact"
+ },
+ "project": {
+  "name": "Example Lanka mobile app"
+ },
+ "scope": {
+  "inclusions": "preset:lk/inclusions.mobile-app",
+  "features": "preset:lk/features.mobile-app-starter",
+  "platform": "React Native",
+  "devices": "iPhones running iOS 17 or later and Android phones running Android 10 or later"
+ },
+ "fee": {
+  "standard": 4200000,
+  "discount": 0
+ },
+ "milestones": "preset:lk/milestones.20-30-30-20",
+ "timeline": {
+  "duration": "Fourteen weeks",
+  "tasks": "preset:lk/workplan.mobile-app-14week"
+ },
+ "support": {
+  "included": {
+   "value": 3,
+   "unit": "months"
+  }
+ }
+}

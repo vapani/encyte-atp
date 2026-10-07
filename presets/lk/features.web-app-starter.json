@@ -1,0 +1,34 @@
+[
+ [
+  "Sign-in and accounts",
+  "Email and password sign-in, password reset, and a profile page"
+ ],
+ [
+  "User roles",
+  "Administrator and standard user, each seeing only what they are allowed to"
+ ],
+ [
+  "Dashboard",
+  "A summary of what needs attention when a user signs in"
+ ],
+ [
+  "Records",
+  "Create, view, edit and archive the main records the business works with"
+ ],
+ [
+  "Search and filters",
+  "Find records by name, date and status"
+ ],
+ [
+  "Email notifications",
+  "Sent for the events set out in the acceptance criteria"
+ ],
+ [
+  "Admin area",
+  "Manage users, roles and settings"
+ ],
+ [
+  "Legal",
+  "Privacy, terms and disclaimer wording supplied by the Client"
+ ]
+]

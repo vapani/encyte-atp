@@ -320,35 +320,77 @@ These pack settings are all optional, and Australia uses none of them:
 | `currency_symbol` | put in front of every amount, e.g. `LKR ` |
 | `store_inclusion` | the online store line added to 2.1 |
 | `defaults` | engagement values the country fills in when the engagement leaves them out |
+| `type_defaults` | the same, per contract type, such as each app type's exclusions |
 
 ## Sri Lankan contracts
 
 `jurisdictions/LK.json` builds from `template/atp-website-lk.docx`: the revised Acentura
 agreement, in formal language (the Client, the Provider), with sections 1.0 to 18.0
-and a signing block with two witnesses. Amounts are in LKR, and the Provider is registered
-for SSCL, so 2.5% is added and shown separately. There is no GST or VAT.
+and a signing block with two optional witnesses. Amounts are in LKR. Fees exclude SSCL, VAT
+and any other tax properly chargeable by law; the Provider is registered for SSCL only, so
+2.5% is added and shown separately. Nothing is withheld from a resident company's service
+fees, so 4.0 asks for payment in full, with a certificate only if a future law requires a
+withholding.
 
-- **Website only so far**, with the online store option (3.6, with PayHere, WebXPay or a
-  bank as the gateway, and up to `scope.store_products` products entered, 50 by default).
-  The app types are next.
-- **Approved.** Asitha approved the website wording on 7 October 2026, so `reviewed`
-  lists `website` and Sri Lankan website contracts are issued normally. 18.4 names the
-  CCC-ICLP International ADR Center to appoint a mediator if the parties cannot agree.
+**Core terms (October 2026 redraft).** After an external review, the parts every type shares
+were redrafted once and apply to all four:
+
+- 1.0 and 17.0: the ATP is self-contained and replaces the proposal.
+- 2.3 *Supported environments and Client accounts* is split from 2.4 *Exclusions*, so fees
+  are 2.5. 2.3 carries an accessibility qualification on every type.
+- 4.0: the first payment is a defined **advance**, labelled in the payment table.
+- 13.0 *Ending This Agreement*: one table of the six ways it can end early (client
+  convenience, client breach, client silence, provider breach, provider convenience, force
+  majeure), with the notice, what the Client pays and what happens to the advance. The
+  advance is kept on the Client's side of the table, as the greater of it and the work
+  done, never on top of it; it counts toward the work, or is refunded, on the Provider's
+  side. 13.2 to 13.5 cover refunds, handover, dissatisfaction and what continues.
+- 14.0: the lien covers unpaid work only, never the Client's materials, data or accounts.
+- 15.0: silence for 30 days leads to a written notice and 10 business days before the
+  project can be suspended or ended. Payment milestones do not move for client delays.
+- 16.0: approval by silence is limited to designs and content sent by email, with a
+  reminder that says so, and never covers legal wording, facts, payments or release.
+- 10.1: a personal-data clause (the Client controls, the Provider processes), with the
+  PDPA "as amended" and breach notice within 48 hours.
+- 3.5: a handover checklist, with items by type.
+- 17.0: electronic signing and counterparts.
+
+Type-specific: the website has an acceptance checklist in 3.4 and says included support is
+defect correction only, not platform updates (4.1). The apps add security, backups and
+who monitors after support (3.6), and capacity targets in the acceptance criteria. The
+mobile types list what the Client supplies for the stores and make submission, not store
+approval, the point of delivery (3.8). The web and mobile app adds an end-to-end test,
+acceptance of the whole, and the shared back end.
+
+- **All four types.** A website, with the online store option (3.6, with PayHere, WebXPay
+  or a bank as the gateway, and up to `scope.store_products` products entered, 50 by
+  default). The app types carry the Australian app terms in the Sri Lankan voice: 2.2
+  Features, what the Client holds and the browsers or devices in 2.3, 3.4 User acceptance
+  testing (10 business days, then 5 per re-test), 3.5 handover of the code once paid, 3.6
+  Environments and source code with backups, 3.7 Third-party services and platform changes,
+  3.8 App store release for the mobile types, and feedback on each testing release in 4.2.
+  App contracts default to the four-part split `lk/milestones.20-30-30-20`.
+- **Drafts until approved.** The website was approved on 7 October 2026, then paused the
+  same day for the core-terms redraft, so `reviewed` is empty and every Sri Lankan build is
+  a draft. Adding a type to `reviewed` approves it. 18.4 names the CCC-ICLP International
+  ADR Center to appoint a mediator if the parties cannot agree.
 - **Placeholders.** A fact still to come is written `[... – to confirm]`. The build
   highlights each one and lists it, and refuses to issue a contract that still has one.
   The Sri Lankan template has none left.
 - **Presets** live in `presets/lk/` and are named `preset:lk/...`: the inclusions, the
-  eight-week plan (5 business days of testing in week 7) and the 30-40-30, 40-30-30 and
-  40-40-20 splits. The final payment is always on acceptance under 3.4.
-- **The sample** is `engagements/sample-lk-website.json`, with subpages in 2.2.
+  eight-week plan (5 business days of testing in week 7) and the 30-40-30, 40-30-30,
+  40-40-20 and 20-30-30-20 splits. The first payment is always the advance, and the final
+  payment is always on acceptance under 3.4.
+- **The samples** are `engagements/sample-lk-website.json`, with subpages in 2.2,
+  `sample-lk-web-app.json`, `sample-lk-mobile-app.json` and `sample-lk-web-mobile-app.json`,
+  each with its own ATP and proposal numbers.
 - **Engagement fields** differ from Australia's: `client.reg_no` replaces
   `client.abn`, and `support.plan` is not used, because 4.1 quotes ongoing support
   separately.
 - **In the form**, pick Sri Lanka under *Country*. It asks for a company registration
   number instead of an ABN, and prices excluding SSCL. There is no care plan price or
   hosting note, and page purposes are optional, because Sri Lankan proposals list pages by
-  name. Only Website is offered until the app types have a Sri Lankan template (`types` in
-  the pack).
+  name. It offers the types listed under `types` in the pack, now all four.
 
 
 ## Known gaps — deliberately not in the template
