@@ -241,13 +241,17 @@ mobile app" in a web and mobile app).
 | Clause | Website | Web app | Mobile app | Web and mobile app |
 |---|---|---|---|---|
 | 2.2 | Pages included | Features included | Features included | Features included |
+| 2.3 environments | browsers | browsers | `scope.devices`, tested on a representative set of devices | browsers for the web app, `scope.devices` for the mobile app |
 | 2.3 held items | three (four with a store) | three | four (adds developer accounts) | four |
-| 2.3 support | browsers | browsers | `scope.devices` | browsers for the web app, `scope.devices` for the mobile app |
-| 2.3 results | search and traffic | security, performance; no promise of error-free software | same as web app | same |
+| 2.4 results | search and traffic | security, performance; no promise of error-free software | same as web app | same |
 | 3.4 rounds | two design rounds, two feedback rounds | two design rounds, and feedback on every testing release within scope | same | same |
 | 3.5 | – | defect severity: start within 1 / 3 business days | same | same |
 | 3.6 | Acceptance, from "ready for review" | User acceptance testing (UAT), from "ready for UAT": criteria per feature agreed before development, the client's testers and data, in the browsers and a testing environment; only critical and major defects hold up sign-off, and minor ones are fixed before the support period ends | same, on the client's devices through TestFlight and Google Play testing | both, each its own way |
-| 3.7 Handover | platform admin; site transferred once paid | admin area, documentation; repository transferred once paid | same | same |
+| 3.5 support | defect fixes only: no content changes, integrations, theme or plugin updates, platform changes or accessibility audits | – | – | – |
+| 3.6 web and mobile | – | – | – | three-part UAT (web, mobile, end to end) and one acceptance for the whole |
+| 3.7 Handover | platform admin; a checklist once paid: site transfer, credentials, content export, licence list | admin area; a checklist once paid: repository, database export, documentation, credentials, licence notices, our own tools | same, plus signing keys and store credentials | same as mobile |
+| 3.8 | – | security (encryption, hashed passwords, role access, 30 days of daily backups) and who monitors after support | same | same, plus the shared back end |
+| 3.10 | – | – | delivery on submission; the list of what the client supplies for the stores | same |
 | 3.8 | Online store, when ticked | Environments and source code: ours until handover; production and daily backups in client's accounts, the backups the client's once support ends; permissive licences only | same | same |
 | 3.9 Third-party services and platform changes | – | provider changes are a change; new OS/browser versions are not a defect | same | same |
 | 3.10 App store release | – | – | client's developer accounts; rejection split by fault; acceptance does not wait for store review | same, for the mobile app |
@@ -355,19 +359,21 @@ larger engagement, and insurance and privacy would both be table stakes for an a
 | Gap | Status |
 |---|---|
 | **Insurance / professional indemnity** | **Parked — Encyte does not hold cover yet.** Do not add a warranty until policies exist; warranting cover you do not hold is worse than silence. See below — this is now the binding constraint on three separate terms. |
-| **Privacy / overseas contractors** | **Deferred 23 Sep 2026, consciously.** Clause 8.0 states offshore handling but names no countries, binds no subcontractors and sets no breach timeframe. Risk dropped sharply when the §8 liability carve-out was removed, so a privacy failure is now capped at fees rather than unlimited. Open questions are recorded below. |
+| **Privacy / overseas contractors** | **Partly closed 7 Oct 2026.** 8.0 now limits use to the work, sets security basics, binds everyone who handles the data (contractors included) to written terms under the APPs, gives a 48-hour breach notice, and returns or deletes data within 30 days. Still open: naming the countries, and whether offshore personnel get production access. Encyte must actually hold those written terms with its team. |
 | **Cap on reimbursable expenses** | Clause 5.0 requires written approval per purchase, but sets no ceiling. |
+| **Unfair contract terms review** | **Recommended 7 Oct 2026, not yet done.** An external review asked for the standard terms to be checked as a package, because they are used with small businesses. 4.2 was changed first: if the client cancels or breaches, Encyte keeps the greater of 10% of the fee and the work done, and refunds the rest, and never keeps it if Encyte breaches. Left for the lawyer: the client's uncapped cover for IP and privacy claims against Encyte's capped liability (10.0). |
 
 *Acceptance criteria* and *force majeure exit* were listed here until 23 Sep 2026. Both are
 now in the template (3.6 and 11.0) and are no longer gaps.
 
 ### Privacy — what to settle before the next engagement
 
-Four things, none answered yet. **Which countries** the team works from; whether they are
-**employees or subcontractors** (decides whether a flow-down obligation is needed); whether
-offshore personnel get **production access** — WordPress admin usually exposes contact-form
-submissions, which are personal information; and a **breach notification timeframe** the
-client can rely on, since their own assessment clock runs 30 days.
+Two of four are now answered in 8.0 (7 Oct 2026): everyone who handles the data is bound by
+**written terms** (a flow-down, whether employee or subcontractor), and the **breach
+notification timeframe** is 48 hours, inside the client's 30-day assessment clock. Still open:
+**which countries** the team works from, and whether offshore personnel get **production
+access** — WordPress admin usually exposes contact-form submissions, which are personal
+information.
 
 Two ways to close it. **Disclose and control** — name countries, bind subcontractors,
 define the breach process. Or **narrow the exposure** — commit that personal information
