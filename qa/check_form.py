@@ -6,7 +6,8 @@
 Starts build/serve.py on a free local port and sends it the requests the page
 sends, built from the sample engagements: a good build, an em dash (replaced), a
 leftover token (refused), a bad ABN (refused), a low price (asks first), and a
-Sri Lankan app (built as a marked draft). Also checks the page's script with node
+Sri Lankan app (built as a marked draft); and the example proposal data files.
+Also checks the page's script with node
 when node is installed. Writes nothing into the project. Exits 1 if anything fails.
 """
 import json, os, shutil, socket, subprocess, sys, tempfile, time, urllib.request, urllib.error, zipfile
@@ -104,6 +105,33 @@ def check_page_script(port):
     expect(r.returncode == 0, f"the page script parses ({r.stderr.strip()[:120]})")
 
 
+def check_data_files(port):
+    """The example data files fill the form exactly; a .json that is not one is refused."""
+    import proposal_data
+    au = proposal_data.read(f"{ROOT}/docs/examples/example-au-website.json")["fields"]
+    expect(au["milestones"]["value"] == "milestones.20-40-40" and au["timeline.duration"]["value"] == "Eight weeks"
+           and au["scope.pages"]["value"][3] == ["Projects", "Recent work, by service", 1]
+           and all(v["confidence"] == "high" for k, v in au.items() if k != "atp.ref"),
+           "the Australian example data file reads exactly")
+    lk = proposal_data.read(f"{ROOT}/docs/examples/example-lk-web-app.json")["fields"]
+    expect(lk["jurisdiction"]["value"] == "LK" and lk["milestones"]["value"] == "lk/milestones.20-30-30-20"
+           and lk["client.reg_no"]["value"] == "PV00000", "the Sri Lankan example data file reads exactly")
+
+    def upload(name, blob):
+        boundary = "qa-boundary"
+        body = (f"--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"{name}\"\r\n"
+                f"Content-Type: application/json\r\n\r\n").encode() + blob + f"\r\n--{boundary}--\r\n".encode()
+        req = urllib.request.Request(f"http://127.0.0.1:{port}/extract", data=body, method="POST",
+                                     headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
+        return json.loads(urllib.request.urlopen(req, timeout=30).read())
+
+    r = upload("data.json", open(f"{ROOT}/docs/examples/example-au-website.json", "rb").read())
+    expect(r.get("fields", {}).get("proposal.ref", {}).get("value") == "26-EXC-WD-070",
+           "the form reads an uploaded data file")
+    r = upload("other.json", b'{"hello": 1}')
+    expect("not a proposal data file" in r.get("error", ""), "a .json that is not a data file is refused")
+
+
 def check_requests(port):
     body, h = post(port, form_request("sample-example-co"))
     expect(body[:2] == b"PK" and "X-Record" not in h and "X-Draft" not in h,
@@ -143,6 +171,7 @@ def main():
                 time.sleep(0.2)
         check_page_script(port)
         check_requests(port)
+        check_data_files(port)
     finally:
         server.terminate(); server.wait(timeout=10)
     print(f"form: {'all checks pass' if not failures else f'{len(failures)} failed'}")

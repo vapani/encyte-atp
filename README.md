@@ -156,6 +156,20 @@ Two things worth knowing about this repo:
   `core.ignorecase`, so an unanchored `ATP-*.docx` also matches
   `template/atp-website.docx` and silently leaves the contract out of the repo.
 
+## Proposal data files
+
+The form reads a proposal two ways. A PDF or Word proposal is read for patterns, and every
+value it finds is shaded as a guess. A **proposal data file**, the exact values the proposal
+was written from, fills the form with nothing to guess. Drop either on *Start from a
+proposal*.
+
+The format, the fields and the instruction to add to the proposal generator are in
+[`docs/proposal-data-file.md`](docs/proposal-data-file.md), with an Australian and a Sri
+Lankan example in `docs/examples/`. A data file starts the form fresh for its country and
+contract type, so nothing carries over from an earlier upload, and its notes say what it
+left out, usually the client's legal name, ABN or registration number, and address. To see
+what a file would fill: `python3 build/proposal_data.py <file.json>`.
+
 ## Checking a change
 
 Run the QA checks after changing a template, a preset or the code, and before deploying:
@@ -178,7 +192,8 @@ Nothing is written into the project.
   each is refused with a useful message.
 - **`qa/check_form.py`** starts the form on a free local port and sends it the requests the
   page sends: a good build, an em dash (replaced), a leftover token (refused), a bad ABN, a
-  low price, and a Sri Lankan app (a marked draft). It also checks that each contract type
+  low price, a Sri Lankan app (a marked draft) and the example proposal data files. It
+  also checks that each contract type
   is offered only the splits that fit it, and that the page's script parses, when node is
   installed.
 

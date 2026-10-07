@@ -1,0 +1,55 @@
+{
+ "format": "encyte-proposal-data",
+ "version": 1,
+ "country": "LK",
+ "contract_type": "web_app",
+ "proposal": {
+  "ref": "26-EXL-WA-082",
+  "date": "22 September 2026"
+ },
+ "client": {
+  "short_name": "Example Lanka",
+  "contact_name": "Sample Contact",
+  "legal_name": "Example Lanka (Private) Limited",
+  "reg_no": "PV00000",
+  "address": "No. 10, Sample Road, Colombo 03, Sri Lanka"
+ },
+ "project": {
+  "name": "Example Lanka client portal"
+ },
+ "scope": {
+  "platform": "Laravel and Vue",
+  "features": [
+   {
+    "name": "Sign-in and accounts",
+    "description": "Email and password sign-in, password reset, and a profile page"
+   },
+   {
+    "name": "Records",
+    "description": "Create, view, edit and archive the main records the business works with"
+   },
+   {
+    "name": "Admin area",
+    "description": "Manage users, roles and settings"
+   }
+  ]
+ },
+ "fee": {
+  "currency": "LKR",
+  "standard": 2800000,
+  "discount": 0
+ },
+ "payment_split": [
+  20,
+  30,
+  30,
+  20
+ ],
+ "timeline": {
+  "weeks": 12
+ },
+ "support": {
+  "included_value": 3,
+  "included_unit": "months"
+ }
+}

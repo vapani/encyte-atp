@@ -1,0 +1,102 @@
+{
+ "format": "encyte-proposal-data",
+ "version": 1,
+ "country": "AU",
+ "contract_type": "website",
+ "proposal": {
+  "ref": "26-EXC-WD-070",
+  "date": "15 September 2026"
+ },
+ "client": {
+  "short_name": "Example Co",
+  "contact_name": "Sam Sample",
+  "legal_name": "",
+  "abn": "",
+  "address": ""
+ },
+ "project": {
+  "name": "Example Co website"
+ },
+ "scope": {
+  "platform": "Webflow",
+  "pages": [
+   {
+    "name": "Home",
+    "purpose": "A clear starting point for each audience"
+   },
+   {
+    "name": "About",
+    "purpose": "Who we are and how we work"
+   },
+   {
+    "name": "Services",
+    "purpose": "What we do, and for whom"
+   },
+   {
+    "name": "Projects",
+    "purpose": "Recent work, by service",
+    "level": 1
+   },
+   {
+    "name": "Contact",
+    "purpose": "Enquiry form, phone and email"
+   }
+  ],
+  "online_store": false
+ },
+ "fee": {
+  "currency": "AUD",
+  "standard": 7500,
+  "discount": 300
+ },
+ "payment_split": [
+  20,
+  40,
+  40
+ ],
+ "timeline": {
+  "weeks": 8,
+  "tasks": [
+   {
+    "task": "Kick-off meeting and requirements capture",
+    "who": "Both",
+    "when": "Week 1"
+   },
+   {
+    "task": "Content, photos and brand files provided",
+    "who": "Client",
+    "when": "Week 1"
+   },
+   {
+    "task": "First design draft, for review",
+    "who": "Encyte",
+    "when": "Week 2"
+   },
+   {
+    "task": "Design freeze – you approve the look",
+    "who": "Client",
+    "when": "Week 3"
+   },
+   {
+    "task": "Page build",
+    "who": "Encyte",
+    "when": "Weeks 4–5"
+   },
+   {
+    "task": "Two rounds of feedback, then sign-off",
+    "who": "Client",
+    "when": "Week 7"
+   },
+   {
+    "task": "Final details confirmed, then the website goes live",
+    "who": "Encyte",
+    "when": "Week 8"
+   }
+  ]
+ },
+ "support": {
+  "included_value": 60,
+  "included_unit": "days",
+  "plan_price": 99
+ }
+}

@@ -323,6 +323,11 @@ def _prepared_for(text):
 
 
 def extract(path):
+    # A proposal data file carries the exact values; nothing needs reading from the text.
+    if path.lower().endswith(".json"):
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import proposal_data
+        return proposal_data.read(path)
     text, cover = read_text(path)
     flat = re.sub(r"[ \t]+", " ", text)
     out, notes = {}, []

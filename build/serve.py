@@ -193,8 +193,8 @@ button.lv{padding:5px 8px;font-size:13px;line-height:1;margin-right:2px}
   <h2>Start from a proposal <span style="font-weight:400;color:var(--mut)">(optional)</span></h2>
   <p class="hint">Upload the proposal and the form fills in what it can find. It reads patterns,
      not meaning, so <strong>check every field it fills</strong> &mdash; shaded fields are guesses.</p>
-  <div id="drop">Drop a .docx or .pdf here, or click to choose</div>
-  <input type="file" id="file" accept=".docx,.pdf" hidden>
+  <div id="drop">Drop the proposal (.pdf or .docx) or its data file (.json) here, or click to choose</div>
+  <input type="file" id="file" accept=".docx,.pdf,.json" hidden>
   <div id="xnotes"></div>
 </div>
 
@@ -455,14 +455,27 @@ async function send(f){
   if(j.error){ drop.textContent = 'Could not read it: ' + j.error; return; }
   let filled = 0;
   const extra = [];
+  // A data file is the whole proposal: start from the standard form for its country and
+  // type, with no client or references left over from an earlier upload, then fill it in.
+  const exact = f.name.toLowerCase().endsWith('.json');
+  if(exact){
+    document.querySelectorAll('.field.guess').forEach(e => e.classList.remove('guess'));
+    ['client.legal_name', 'client.short_name', 'client.abn', 'client.reg_no', 'client.address',
+     'client.contact_name', 'atp.ref', 'proposal.ref', 'proposal.date', 'project.name',
+     'scope.exclusions', 'scope.devices', 'hosting.note', 'fee.standard', 'fee.discount']
+      .forEach(id => { if($(id)) $(id).value = ''; });
+    $('online_store').checked = false;
+    applyCountry(j.fields.jurisdiction.value, true);
+    applyType(j.fields.engagement_type.value, true);
+  }
   if(j.fields.jurisdiction){
     applyCountry(j.fields.jurisdiction.value);
-    markGuess('jurisdiction', true);
+    markGuess('jurisdiction', j.fields.jurisdiction.confidence !== 'high');
     filled++;
   }
   if(j.fields.engagement_type){
     const t = j.fields.engagement_type.value;
-    if(TYPES[t]){ applyType(t); markGuess('engagement_type', true); filled++; }
+    if(TYPES[t]){ applyType(t); markGuess('engagement_type', j.fields.engagement_type.confidence !== 'high'); filled++; }
     else extra.push(COUNTRIES[country].adjective + ' contracts cover '
       + Object.values(TYPES).map(x => x.name.toLowerCase()).join(', ') + ' only so far, so the '
       + 'contract type stays ' + TYPES[current].name + ' - check whether this job needs its own contract');
@@ -472,8 +485,14 @@ async function send(f){
     if(k === 'scope.pages'){
       $('pages').querySelector('tbody').innerHTML = '';
       v.value.forEach(r => addPage(r[0], r[1], r[2] || 0));
-      // read from the proposal, so shade them like any other guess
-      document.querySelectorAll('#pages tbody tr').forEach(tr => tr.classList.add('guess'));
+      // read from the proposal text, so shade them like any other guess; a data file is exact
+      if(v.confidence !== 'high')
+        document.querySelectorAll('#pages tbody tr').forEach(tr => tr.classList.add('guess'));
+      filled++; continue;
+    }
+    if(k === 'tasks'){                       // a data file carries the timeline rows too
+      $('tasks').querySelector('tbody').innerHTML = '';
+      v.value.forEach(r => addTask(r[0], r[1], r[2]));
       filled++; continue;
     }
     if(k === 'milestones' && !TYPES[current].splits.includes(v.value)){
@@ -482,12 +501,14 @@ async function send(f){
       continue;
     }
     const el = $(k);
+    if(el && el.type === 'checkbox'){ el.checked = !!v.value; showProducts(); filled++; continue; }
     if(el){ el.value = v.value; markGuess(k, v.confidence === 'low'); filled++; }
   }
   drop.textContent = f.name + ' — ' + filled + ' fields filled';
   const notes = (j.notes || []).concat(extra);
   $('xnotes').innerHTML = '<div class="note"><strong>Read before you build.</strong> '
-    + 'Shaded fields were guessed from patterns in the document and are often wrong.'
+    + (exact ? 'Filled from the data file. Shaded fields still need checking.'
+             : 'Shaded fields were guessed from patterns in the document and are often wrong.')
     + (notes.length ? '<ul>' + notes.map(n => '<li>' + n + '</li>').join('') + '</ul>' : '')
     + '</div>';
 }
@@ -848,8 +869,8 @@ class Handler(BaseHTTPRequestHandler):
             n = int(self.headers.get("Content-Length", 0))
             name, blob = parse_upload(self.rfile.read(n), self.headers.get("Content-Type"))
             ext = os.path.splitext(name)[1].lower()
-            if ext not in (".docx", ".pdf"):
-                raise ValueError("upload a .docx or .pdf")
+            if ext not in (".docx", ".pdf", ".json"):
+                raise ValueError("upload the proposal as a .pdf or .docx, or its data file (.json)")
             with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as fh:
                 fh.write(blob)
                 tmp = fh.name
