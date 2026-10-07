@@ -156,6 +156,35 @@ Two things worth knowing about this repo:
   `core.ignorecase`, so an unanchored `ATP-*.docx` also matches
   `template/atp-website.docx` and silently leaves the contract out of the repo.
 
+## Checking a change
+
+Run the QA checks after changing a template, a preset or the code, and before deploying:
+
+```
+python3 qa/run.py
+```
+
+It takes about 15 seconds and ends with `QA PASSED` or `QA FAILED`, naming what broke.
+Nothing is written into the project.
+
+- **`qa/check_contracts.py`** builds every country, contract type and payment split, with
+  and without the online store (40 combinations), and checks each contract: no leftover
+  tokens, placeholders or em dashes; no doubled words or stray spaces; section numbers in
+  order; every "section X.Y" pointing at a section that exists; payments adding up to the
+  fee, each the right percentage, with GST or SSCL right; and DRAFT marking only on types
+  not yet approved. 20-40-40 on the longer app timelines is refused, and that is expected.
+- **`qa/check_guards.py`** breaks a good engagement one way at a time (a percentage that
+  does not add up, a missing ABN, a subpage with no page above it, and so on) and checks
+  each is refused with a useful message.
+- **`qa/check_form.py`** starts the form on a free local port and sends it the requests the
+  page sends: a good build, an em dash (replaced), a leftover token (refused), a bad ABN, a
+  low price, and a Sri Lankan app (a marked draft). It also checks that each contract type
+  is offered only the splits that fit it, and that the page's script parses, when node is
+  installed.
+
+A new contract type or country needs a sample engagement in `engagements/` and an entry
+in `SAMPLES` in `qa/check_contracts.py`.
+
 ## Architecture
 
 | Layer | Where | Changes per deal? |
