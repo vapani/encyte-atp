@@ -338,7 +338,9 @@ were redrafted once and apply to all four:
 - 1.0 and 17.0: the ATP is self-contained and replaces the proposal.
 - 2.3 *Supported environments and Client accounts* is split from 2.4 *Exclusions*, so fees
   are 2.5. 2.3 carries an accessibility qualification on every type.
-- 4.0: the first payment is a defined **advance**, labelled in the payment table.
+- 4.0: the first payment is a defined **advance**, labelled in the payment table. Every
+  invoice is payable within 14 days of its date, as in Australia (the Acentura original said
+  on receipt), and the final payment is invoiced on acceptance.
 - 13.0 *Ending This Agreement*: one table of the six ways it can end early (client
   convenience, client breach, client silence, provider breach, provider convenience, force
   majeure), with the notice, what the Client pays and what happens to the advance. The
