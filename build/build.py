@@ -171,6 +171,25 @@ def weeks_in(text):
             best = max(best, n)
     return best
 
+def split_week_problems(milestones, plan):
+    """Milestones that name a week the plan does not reach, or a final week that is not the plan's last.
+
+    The form uses this too, to offer only the payment splits that fit a contract type."""
+    errs = []
+    if not plan:
+        return errs
+    last = len(milestones)
+    for i, ms in enumerate(milestones, 1):
+        named = [int(n) for a, b in re.findall(r"\bweeks?\s+(\d+)(?:\s*[–-]\s*(\d+))?",
+                                              ms["description"], re.I) for n in (a, b) if n]
+        if not named:
+            continue
+        wk = max(named)
+        if wk > plan or (i == last and wk != plan):
+            errs.append(f"payment milestone {i} says week {wk} but the timeline ends in week {plan} "
+                        f"- choose a payment split that does not name weeks, or change the timeline")
+    return errs
+
 # ---------------- validation ----------------
 def validate(eng, jur):
     errs = []
@@ -189,7 +208,8 @@ def validate(eng, jur):
     if eng["fee"]["discount"] > eng["fee"]["standard"]:
         errs.append("discount exceeds standard price")
     elif eng["fee"]["standard"] - eng["fee"]["discount"] <= 0:
-        errs.append("the price is $0 - enter the standard price excluding tax")
+        errs.append(f"the price is {money(0, jur.get('currency_symbol', '$'))} - enter the standard "
+                    f"price excluding {jur['tax']['name']}")
     # the work plan must fit inside the stated duration
     dur = weeks_in(eng.get("timeline", {}).get("duration", ""))
     plan = max([weeks_in(t[-1]) for t in eng.get("timeline", {}).get("tasks", []) if t] or [0])
@@ -201,17 +221,7 @@ def validate(eng, jur):
                     f"- pick a matching workplan preset, or change the duration")
     # A milestone that names a week must agree with the plan. 20-40-40 says 'on
     # acceptance (Week 8)', which contradicts a seven- or ten-week timeline.
-    if plan:
-        last = len(eng["milestones"])
-        for i, ms in enumerate(eng["milestones"], 1):
-            named = [int(n) for a, b in re.findall(r"\bweeks?\s+(\d+)(?:\s*[–-]\s*(\d+))?",
-                                                  ms["description"], re.I) for n in (a, b) if n]
-            if not named:
-                continue
-            wk = max(named)
-            if wk > plan or (i == last and wk != plan):
-                errs.append(f"payment milestone {i} says week {wk} but the timeline ends in week {plan} "
-                            f"- choose a payment split that does not name weeks, or change the timeline")
+    errs += split_week_problems(eng["milestones"], plan)
     etype = eng.get("engagement_type")
     if etype not in TYPES:
         errs.append(f"engagement_type '{etype}' has no template (one of: {', '.join(TYPES)})")

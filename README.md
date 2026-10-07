@@ -210,6 +210,10 @@ Acentura ATP — 30/40/30 in clause 2.3 and 40/20/20 in clause 4.0, because it w
 - **no unreplaced `{{tokens}}` in the output**, including in headers and footers
 - **no em dashes** anywhere in the output. House style is the spaced en dash, and Word's
   autocorrect turns ` - ` into an em dash the moment anyone edits the template by hand
+- **in the form**, em dashes typed or pasted into any field become spaced en dashes before
+  the build, and a contract that still holds a `{{token}}` or a `[… – to confirm]` placeholder is
+  refused with what to fix, never downloaded. The form offers only the payment splits whose
+  named weeks fit the contract type (20-40-40 pays in week 8, so it is offered for websites)
 - `engagement_type` has a template, and is in `REVIEWED` unless the build is `--draft`
 - scope and work-plan presets belong to the engagement's type
 - the final milestone is invoiced **on acceptance**. 3.6, 3.5 and 11.0 all key to acceptance,

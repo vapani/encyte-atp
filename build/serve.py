@@ -401,7 +401,11 @@ function applyType(t, init, std){
     tr.querySelector('.pn').placeholder = T.item; tr.querySelector('.pp').placeholder = T.desc; });
   if(std.plan) loadPlan();
   if(std.duration) $('timeline.duration').value = T.duration;
-  if(std.split) $('milestones').value = T.split;
+  // offer only the splits that fit this type, keeping the chosen one if it still fits
+  const kept = $('milestones').value;
+  $('milestones').innerHTML = T.splits
+    .map(n => '<option value="' + n + '">' + n.replace(/^\\w+\\//, '') + '</option>').join('');
+  $('milestones').value = (std.split || !T.splits.includes(kept)) ? T.split : kept;
   if(std.platform) $('scope.platform').value = T.platform;
 }
 
@@ -414,8 +418,6 @@ function applyCountry(c, init){
   $('jurisdiction').value = c;
   $('engagement_type').innerHTML = Object.keys(TYPES)
     .map(t => '<option value="' + t + '">' + TYPES[t].name + '</option>').join('');
-  $('milestones').innerHTML = C.splits
-    .map(n => '<option value="' + n + '">' + n.replace(/^\\w+\\//, '') + '</option>').join('');
   $('abn-field').style.display = C.id === 'abn' ? '' : 'none';
   $('reg-field').style.display = C.id === 'reg_no' ? '' : 'none';
   $('hosting-field').style.display = C.hosting ? '' : 'none';
@@ -473,6 +475,11 @@ async function send(f){
       // read from the proposal, so shade them like any other guess
       document.querySelectorAll('#pages tbody tr').forEach(tr => tr.classList.add('guess'));
       filled++; continue;
+    }
+    if(k === 'milestones' && !TYPES[current].splits.includes(v.value)){
+      extra.push('the payment split in the proposal (' + v.value.replace(/^\\w+\\//, '') + ') does not fit a '
+        + TYPES[current].name.toLowerCase() + ' timeline, so the standard split is kept - check it');
+      continue;
     }
     const el = $(k);
     if(el){ el.value = v.value; markGuess(k, v.confidence === 'low'); filled++; }
@@ -639,6 +646,35 @@ LABELS = {
 }
 
 
+def house_dashes(v):
+    """Em dashes in typed or pasted text become the house style's spaced en dash.
+
+    Proposals and Word documents are full of em dashes, and build.py rightly refuses a
+    contract that contains one; the form fixes the punctuation rather than refuse."""
+    if isinstance(v, str):
+        return re.sub(r"\s*\u2014\s*", " \u2013 ", v).strip()
+    if isinstance(v, list):
+        return [house_dashes(x) for x in v]
+    if isinstance(v, dict):
+        return {k: house_dashes(x) for k, x in v.items()}
+    return v
+
+
+def final_check_errors(report):
+    """build.py's report on a contract that built but failed its final checks, in the form's words."""
+    errs = []
+    m = re.search(r"UNREPLACED TOKENS: \[(.*)\]", report)
+    if m:
+        errs.append(f"The contract still contains {m.group(1)}, which looks like template text typed "
+                    f"into the form - take out the curly braces")
+    held = re.findall(r"^\s+(\[[^\]]*to confirm[^\]]*\])", report, re.M)
+    for ph in dict.fromkeys(held):
+        errs.append(f"The contract still has a placeholder to fill in: {ph} - replace it with the real detail")
+    if "EM DASHES" in report:
+        errs.append("The contract contains an em dash (\u2014) - use a spaced en dash ( \u2013 ) instead")
+    return errs or ["The contract did not pass its final checks"]
+
+
 def friendly(err):
     """build.py's validation message -> (message in the form's words, [field ids])."""
     m = re.match(r"missing or empty: ([\w.]+)$", err)
@@ -654,8 +690,8 @@ def friendly(err):
         return "Products we add should be a whole number, e.g. 50", ["scope.store_products"]
     if "discount exceeds" in err:
         return "The discount is more than the standard price", ["fee.standard", "fee.discount"]
-    if "price is $0" in err:
-        return "The standard price is empty or $0", ["fee.standard"]
+    if "enter the standard price" in err:
+        return "The standard price is empty or zero", ["fee.standard"]
     if "timeline.tasks is empty" in err:
         return "Add at least one timeline row", []
     if "work plan runs" in err:
@@ -724,6 +760,10 @@ def type_data(jur):
         label, item, desc, platform, platform_hint, project_hint = TYPE_WORDS[t]
         plan = preset_rows(presets("workplan", t, folder)[0])
         weeks = max(builder.weeks_in(r[-1]) for r in plan)
+        # only the payment splits whose named weeks fit this type's standard timeline:
+        # 20-40-40 pays on acceptance in week 8, which no app timeline reaches
+        fitting = [n for n in presets("milestones", folder=folder)
+                   if not builder.split_week_problems(preset_rows(n), weeks)]
         out[t] = {
             "name": TYPE_NAMES[t],
             "inclusions": presets("inclusions", t, folder),
@@ -731,6 +771,7 @@ def type_data(jur):
             "plan": plan,
             "duration": f"{NUM_WORDS.get(weeks, weeks)} weeks",
             "split": splits[t],
+            "splits": fitting,
             "platform": platform, "platform_hint": platform_hint, "project_hint": project_hint,
             "list_label": label, "item": item, "desc": desc,
             "draft": t not in builder.reviewed(jur),
@@ -744,7 +785,6 @@ def country_data():
     for code, form in COUNTRY.items():
         jur = jurisdiction(code)
         out[code] = {**form, "id": jur.get("client_id", "abn"), "tax": jur["tax"]["name"],
-                     "splits": presets("milestones", folder=jur.get("presets", "")),
                      "types": type_data(jur)}
     return out
 
@@ -887,6 +927,7 @@ class Handler(BaseHTTPRequestHandler):
             shutil.rmtree(tmpdir, ignore_errors=True)
 
     def build_in(self, tmpdir, eng, confirmed_low=False):
+        eng = house_dashes(eng)
         slug = slugify(eng["client"]["short_name"])
         path = os.path.join(tmpdir, f"{slug}.json")
         json.dump(eng, open(path, "w"), indent=1, ensure_ascii=False)
@@ -923,8 +964,9 @@ class Handler(BaseHTTPRequestHandler):
         with BUILD_LOCK:
             buf, real = io.StringIO(), sys.stdout
             sys.stdout = buf
+            ok = False
             try:
-                builder.build(path, out, draft=draft)
+                ok = builder.build(path, out, draft=draft)
             except SystemExit:
                 sys.stdout = real
                 errs = [l.strip(" -") for l in buf.getvalue().splitlines() if l.strip().startswith("-")]
@@ -934,6 +976,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, json.dumps({"errors": [str(e)]}))
             finally:
                 sys.stdout = real
+
+        # It built, but failed the final checks: a leftover token or an unfilled
+        # placeholder. Say what to fix rather than hand over a flawed contract.
+        if not ok:
+            return self._send(200, json.dumps({"errors": final_check_errors(buf.getvalue())}))
 
         # It built. A copy is kept only where a store is configured, and never for a
         # draft, which is not issued. Otherwise the download is the record.
