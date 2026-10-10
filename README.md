@@ -96,6 +96,17 @@ otherwise slip past that check. It also refuses a payment split that names a wee
 doesn't reach. 20-40-40 says *on acceptance (Week 8)*, so a seven-week job needs 30-40-30
 or 50-50.
 
+**Payment splits: shortcuts or custom.** The drop-down offers the shortcut splits that fit
+the contract type, and *Custom split…* for anything else. A custom split is 2 to 5 rows,
+each a whole percentage and when it falls due: the first is always the advance on signing
+and the last always acceptance (at least 10%), with *design freeze*, *working demo*,
+*development complete* or *ready for testing* between, in that order. The total shows
+under the rows, red until it is exactly 100%, and Build is blocked until it is; the server
+checks it all again. The contract's wording for each trigger is in `build/splits.py`.
+A proposal or data file whose split matches a shortcut selects it; any other split opens
+as a custom split, with its triggers read from the proposal's words ("20% at kick-off,
+40% at demo, 40% at launch").
+
 A build that fails validation leaves nothing behind. A build that succeeds downloads the
 contract to your computer, and for now that downloaded copy is the record: nothing else is
 saved (7 October 2026). Saving a copy to SharePoint is planned.

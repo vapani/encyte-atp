@@ -42,7 +42,7 @@ standard value for it and, where it matters, says what is missing.
 | `fee.currency` | `"AUD"` or `"LKR"` | `"AUD"` |
 | `fee.standard` | the build price before discount, excluding GST or SSCL | `5500` |
 | `fee.discount` | the discount, excluding GST or SSCL; `0` for none | `650` |
-| `payment_split` | the payment percentages, in order | `[20, 40, 40]` |
+| `payment_split` | the payments in order: percentages, or each as `{"percent", "when"}` saying when it falls due | `[20, 40, 40]`, or `[{"percent": 20, "when": "kick-off"}, {"percent": 40, "when": "working demo"}, {"percent": 40, "when": "acceptance"}]` |
 | `timeline.weeks` | the project length in weeks | `8` |
 | `timeline.tasks` | the work plan, each `{"task", "who", "when"}`; `who` is `"Encyte"`, `"Client"` or `"Both"`; `when` is `"Week 3"` or `"Weeks 4–5"` | see the example |
 | `support.included_value`, `support.included_unit` | the support included after acceptance | `60`, `"days"` |
@@ -56,9 +56,14 @@ standard value for it and, where it matters, says what is missing.
   never em dashes.
 - **The client's legal name, ABN or registration number, and address** are rarely known
   when the proposal is written. Leave them out rather than guess; the form asks for them.
-- **Payment splits** must be one of the standard splits for the country to fill the form:
-  Australia 20-40-40, 30-40-30, 50-50 and 20-30-30-20; Sri Lanka 30-40-30, 40-30-30,
-  40-40-20 and 20-30-30-20. Another split is reported, and the form keeps its standard one.
+- **Payment splits.** A split whose percentages match one of the country's shortcuts uses
+  it: Australia 20-40-40, 30-40-30, 50-50 and 20-30-30-20; Sri Lanka 30-40-30, 40-30-30,
+  40-40-20 and 20-30-30-20. Any other split becomes a **custom split**, so give each
+  payment's `when`: the first is always the advance on signing and the last always
+  acceptance, and those between fall due on *design freeze*, *working demo*,
+  *development complete* or *ready for testing*, in that order. A custom split has 2 to 5
+  payments, adds up to exactly 100, and its final payment is at least 10%. A proposal
+  that says "at launch" is invoiced on acceptance in the contract.
 - **Numbers are plain numbers**: `5500`, not `"$5,500"`.
 
 ## For the proposal generator

@@ -11,6 +11,8 @@ Returns the same shape as extract.extract(): {"fields": {key: {"value", "confide
 "notes": [...]}, with every value it read marked high confidence.
 """
 import glob, json, os, re, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import splits                                         # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FORMAT, VERSION = "encyte-proposal-data", 1
@@ -132,13 +134,24 @@ def read(path):
             out[f"fee.{k}"] = _hi(str(fee[k]))
     split = d.get("payment_split")
     if split:
-        name = split_preset(country, split)
-        if name:
+        # percentages alone, or each payment with when it falls due: {"percent", "when"}
+        given = [x for x in split if isinstance(x, dict)]
+        percents = [int(x["percent"]) if isinstance(x, dict) else int(x) for x in split]
+        phrases = [str(x.get("when", "")) for x in split] if given else None
+        rows, guessed = splits.rows_from(percents, phrases)
+        name = split_preset(country, percents)
+        preset_rows = (splits.rows_from_preset(json.load(open(f"{ROOT}/presets/{name}.json")))
+                       if name else None)
+        if name and (not given or preset_rows == rows):
             out["milestones"] = _hi(name)
         else:
-            notes.append(f"the proposal's payment split ({'-'.join(map(str, split))}) is not one of the "
-                         f"standard splits - pick the nearest, and edit the payment table in Word if the "
-                         f"proposal's split must stand")
+            out["milestones"] = _hi("custom")
+            out["custom_split"] = {"value": rows, "confidence": "low" if guessed else "high"}
+            for problem in splits.problems(rows):
+                notes.append(f"the payment split: {problem[0].lower() + problem[1:]}")
+            if guessed:
+                notes.append("the data file does not say when every payment falls due, so the custom "
+                             "split places them by position - check each one")
 
     tl = d.get("timeline") or {}
     weeks = tl.get("weeks")

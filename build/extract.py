@@ -9,7 +9,9 @@ field it returns must be reviewed before a contract is built from it.
 Each field comes back as {"value": ..., "confidence": "high"|"low"} so the form
 can show you which ones to look at hardest.
 """
-import json, os, re, sys
+import glob, json, os, re, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import splits                                         # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -118,6 +120,31 @@ def _split(flat):
             if len(run) == n and sum(run) == 100 and min(run) >= 10:
                 return run
     return None
+
+
+def _split_phrases(flat):
+    """A payment split written as words, e.g. '20% at kick-off, 40% at demo, 40% at launch'.
+
+    Returns (percentages, phrases) for the first run of two to five such payments that
+    adds up to exactly 100, or None. The phrases say when each payment falls due."""
+    found = [(int(m.group(1)), m.group(2).strip(), m.start(), m.end()) for m in re.finditer(
+        r"(?<![\d.])(\d{1,2})\s?%\s+(?:due\s+|payable\s+)?(?:at|on|upon|when|after|before|prior to)\s+"
+        r"(?:the\s+)?([A-Za-z][A-Za-z &/-]{1,40}?)"
+        r"(?=\s*(?:[,\u00b7;.(/]|\band\b|\d{1,2}\s?%|$)|\s+(?:LKR|AUD|Rs\.?|\$|\d))", flat)]
+    for i in range(len(found)):
+        for n in (2, 3, 4, 5):
+            run = found[i:i + n]
+            close = all(run[k + 1][2] - run[k][3] < 40 for k in range(len(run) - 1))
+            if len(run) == n and close and sum(r[0] for r in run) == 100 and min(r[0] for r in run) >= 5:
+                return [r[0] for r in run], [r[1] for r in run]
+    return None
+
+
+def _preset_for(country, percents):
+    """The shortcut with these percentages, e.g. 'lk/milestones.40-30-30', or None."""
+    folder = "lk/" if country == "LK" else ""
+    name = folder + "milestones." + "-".join(map(str, percents))
+    return name if os.path.exists(f"{ROOT}/presets/{name}.json") else None
 
 
 _COUNT_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7,
@@ -465,16 +492,33 @@ def extract(path):
                      f"clause 5.0 charges plugins and licences at cost on top of the fee, so decide "
                      f"whether the ATP fee should leave the allowance out")
 
-    # --- payment split. Sri Lankan jobs vary it (MILK 40-30-30, Colombo Seven Gin
-    # 40-40-20), so it is read from the proposal and matched to a standard split.
-    split = _split(flat) if country == "LK" else None
-    if split:
-        name = "lk/milestones." + "-".join(map(str, split))
-        if os.path.exists(f"{ROOT}/presets/{name}.json"):
-            out["milestones"] = _lo(name)
+    # --- payment split. Jobs vary it (MILK 40-30-30, Colombo Seven Gin 40-40-20, SLIA
+    # 20-40-40 'at kick-off, at demo, at launch'). Read from LKR amounts in a Sri Lankan
+    # proposal, or from words in either country; a shortcut when one matches, otherwise
+    # a custom split with each payment's trigger.
+    by_amount = _split(flat) if country == "LK" else None
+    by_words = _split_phrases(flat)
+    if by_words and (not by_amount or by_words[0] == by_amount):
+        percents, phrases = by_words
+    else:
+        percents, phrases = by_amount, None
+    if percents:
+        rows, guessed = splits.rows_from(percents, phrases)
+        preset = _preset_for(country, percents)
+        shown = "-".join(map(str, percents)) + (f" ({', '.join(phrases)})" if phrases else "")
+        if preset:                    # the percentages match a shortcut: use it, and say how the proposal put it
+            out["milestones"] = _lo(preset)
+            if phrases:
+                notes.append(f"the proposal splits payments {shown} - the matching shortcut is selected; "
+                             f"choose Custom split if the payments fall due on other events")
         else:
-            notes.append(f"the proposal splits payments {'-'.join(map(str, split))}, which is not a "
-                         f"standard split - pick the nearest, then edit the Word file")
+            out["milestones"] = _lo("custom")
+            out["custom_split"] = _lo(rows)
+            notes.append(f"the proposal splits payments {shown}, which is not one of the shortcuts, so it "
+                         f"is set as a custom split - check when each payment falls due")
+        if phrases and not preset and re.search(r"launch|go[- ]?live", phrases[-1], re.I):
+            notes.append(f"the proposal's final payment is '{phrases[-1]}' - the contract invoices it on "
+                         f"acceptance, which the testing, support and delay clauses depend on")
 
     # --- duration
     m = re.search(r"\b(?:(\d{1,2})|(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve))"

@@ -55,6 +55,16 @@ CASES = [
     ("subpage skips a level", AU, pages([["Home", ""], ["Team", "", 2]]), "subpage with no subpage above", False, 1),
     ("subpage level 3", AU, pages([["Home", ""], ["A", "", 1], ["B", "", 2], ["C", "", 3]]), "use 0, 1 or 2", False, 1),
     ("no timeline rows", AU, lambda e: e["timeline"].update(tasks=[]), "timeline.tasks is empty", False, 1),
+    ("six payments", AU, lambda e: e.update(milestones=[
+        {"percent": 10, "description": "10% at kick-off, due on signing this agreement."}] +
+        [{"percent": 10, "description": f"10% on stage {k}."} for k in range(4)] +
+        [{"percent": 50, "description": "50% on acceptance."}]), "a split has 2 to 5 payments", False, 1),
+    ("final payment under 10%", AU, lambda e: e.update(milestones=[
+        {"percent": 95, "description": "95% at kick-off, due on signing this agreement."},
+        {"percent": 5, "description": "5% on acceptance."}]), "make it at least 10%", False, 1),
+    ("fractional percentage", AU, lambda e: e.update(milestones=[
+        {"percent": 33.5, "description": "33.5% at kick-off, due on signing this agreement."},
+        {"percent": 66.5, "description": "66.5% on acceptance."}]), "whole percentage", False, 1),
     ("Sri Lankan without registration number", LK, lambda e: e["client"].pop("reg_no"), "client.reg_no", True, 1),
     ("em dash in the data", AU, lambda e: e["project"].update(name="Example — site"), "EM DASHES", False, 2),
     ("token in the data", AU, lambda e: e["project"].update(name="{{oops}}"), "{{oops}}", False, 2),

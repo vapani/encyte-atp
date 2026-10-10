@@ -5,6 +5,8 @@ from docx.oxml.ns import qn
 from docx.shared import RGBColor, Twips
 from docx.enum.text import WD_COLOR_INDEX
 from decimal import Decimal, ROUND_HALF_UP
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import splits                                         # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -196,6 +198,17 @@ def validate(eng, jur):
     pct = sum(m["percent"] for m in eng["milestones"])
     if pct != 100:
         errs.append(f"milestone percentages sum to {pct}, not 100")
+    # the limits on any split, shortcut or custom: 2 to 5 payments, each a whole
+    # percentage, and a final payment large enough for acceptance to matter
+    n = len(eng["milestones"])
+    if not splits.MIN_PAYMENTS <= n <= splits.MAX_PAYMENTS:
+        errs.append(f"there are {n} payments - a split has {splits.MIN_PAYMENTS} to "
+                    f"{splits.MAX_PAYMENTS} payments")
+    if any(not isinstance(m["percent"], int) or m["percent"] < 1 for m in eng["milestones"]):
+        errs.append("every payment must be a whole percentage of at least 1%")
+    if eng["milestones"] and eng["milestones"][-1]["percent"] < splits.MIN_FINAL:
+        errs.append(f"the final payment is {eng['milestones'][-1]['percent']}% - make it at least "
+                    f"{splits.MIN_FINAL}%, so acceptance carries real weight")
     for m in eng["milestones"]:                       # the Acentura trap
         stated = re.match(r"\s*(\d+)%", m["description"])
         if stated and int(stated.group(1)) != m["percent"]:

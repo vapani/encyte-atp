@@ -25,6 +25,7 @@ def _load(name):
 
 builder = _load("build")
 extractor = _load("extract")
+splits = _load("splits")
 BUILD_LOCK = threading.Lock()
 
 
@@ -176,6 +177,12 @@ button.lv{padding:5px 8px;font-size:13px;line-height:1;margin-right:2px}
 #tasks th{text-align:left;font-size:12px;font-weight:500;color:var(--mut);padding:0 4px 4px 0}
 #tasks .resp{width:170px}
 #tasks .when{width:130px}
+#split-rows th{text-align:left;font-size:12px;font-weight:500;color:var(--mut);padding:0 4px 4px 0}
+#split-rows .pc{width:130px;white-space:nowrap}
+#split-rows .pc input{width:84px;display:inline-block}
+.split-foot{display:flex;align-items:center;gap:14px;margin-top:6px}
+#split-total{font-size:14px}
+#split-total.off{color:var(--err);font-weight:500}
 .note{background:var(--warnbg);border:1px solid #f0dcb4;border-radius:8px;padding:11px 13px;margin-top:12px;font-size:13px;color:#6b4a12}
 .note ul{margin:6px 0 0 18px;padding:0}
 #status{margin-top:14px;font-size:14px}
@@ -256,6 +263,12 @@ button.lv{padding:5px 8px;font-size:13px;line-height:1;margin-right:2px}
   <div class="field"><label id="std-label">Standard price, excluding GST</label><input id="fee.standard" placeholder="e.g. 9500"><div class="badge">check this</div></div>
   <div class="field"><label id="disc-label">Discount, excluding GST</label><input id="fee.discount" value="0"><div class="badge">check this</div></div>
   <div class="field"><label>Payment split</label><select id="milestones"></select></div>
+  <div class="field full" id="custom-split" style="display:none">
+    <table id="split-rows"><thead><tr><th>Payment</th><th>When it falls due</th><th></th></tr></thead><tbody></tbody></table>
+    <div class="split-foot"><button type="button" id="add-payment">Add payment</button><span id="split-total"></span></div>
+    <div class="hint" style="margin:6px 0 0">2 to 5 payments. The first is the advance, on signing. The last
+      falls due on acceptance and is at least 10%. The payments must add up to exactly 100%.</div>
+  </div>
   <div class="field"><label>Included support</label><input id="support.value" value="60"></div>
   <div class="field"><label>Support unit</label><input id="support.unit" value="days"></div>
   <div class="field" id="plan-field"><label>Care plan, per month excl GST</label><input id="support.price" value="99"></div>
@@ -379,6 +392,72 @@ function standardNow(){
 }
 const ALL = {list: true, plan: true, duration: true, split: true, platform: true, support: true};
 
+// ---- a custom payment split: rows of [percent, trigger]. The first is always the
+// advance and the last acceptance; the ones between follow the project's order.
+const LIMITS = __SPLIT_LIMITS__;
+const ORDER = ['design_freeze', 'demo', 'dev_complete', 'ready'];
+let CUSTOM = [], lastShortcut = '';
+function drawSplit(){
+  const T = TYPES[current], tb = $('split-rows').querySelector('tbody');
+  tb.innerHTML = '';
+  CUSTOM.forEach((r, i) => {
+    const fixed = i === 0 ? 'advance' : (i === CUSTOM.length - 1 ? 'acceptance' : null);
+    const opts = T.triggers.filter(o => fixed ? o[0] === fixed : ORDER.includes(o[0]));
+    if(fixed) r[1] = fixed;
+    else if(!ORDER.includes(r[1])) r[1] = 'dev_complete';
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td class="pc"><input class="sp" type="number" min="1" max="100" step="1"> %</td>'
+      + '<td><select class="st"' + (fixed ? ' disabled' : '') + '>'
+      + opts.map(o => '<option value="' + o[0] + '">' + o[1] + '</option>').join('') + '</select></td>'
+      + '<td class="act">' + (fixed ? '' : '<button type="button" class="link" title="Remove this payment">&times;</button>') + '</td>';
+    tr.querySelector('.sp').value = r[0];
+    tr.querySelector('.st').value = r[1];
+    tr.querySelector('.sp').oninput = e => { r[0] = e.target.value; splitTotal(); };
+    tr.querySelector('.st').onchange = e => { r[1] = e.target.value; };
+    const x = tr.querySelector('.link');
+    if(x) x.onclick = () => { CUSTOM.splice(i, 1); drawSplit(); };
+    tb.appendChild(tr);
+  });
+  $('add-payment').disabled = CUSTOM.length >= LIMITS.max;
+  splitTotal();
+}
+function splitTotal(){
+  const total = CUSTOM.reduce((sum, r) => sum + (Number(r[0]) || 0), 0);
+  $('split-total').textContent = 'Total ' + total + '%' + (total === 100 ? '' : ' \u2013 must be 100%');
+  $('split-total').className = total === 100 ? 'ok' : 'off';
+  return total;
+}
+function showCustom(){
+  const on = $('milestones').value === 'custom';
+  $('custom-split').style.display = on ? '' : 'none';
+  if(on) drawSplit();
+}
+function useCustom(rows){
+  CUSTOM = rows.map(r => [r[0], r[1]]);
+  $('milestones').value = 'custom';
+  showCustom();
+}
+$('add-payment').onclick = () => {
+  if(CUSTOM.length >= LIMITS.max) return;
+  const used = CUSTOM.slice(1, -1).map(r => r[1]);
+  const next = ORDER.find(k => !used.includes(k)) || 'dev_complete';
+  const middle = CUSTOM.slice(1, -1).concat([[0, next]])
+    .sort((a, b) => ORDER.indexOf(a[1]) - ORDER.indexOf(b[1]));
+  CUSTOM = [CUSTOM[0]].concat(middle, [CUSTOM[CUSTOM.length - 1]]);
+  drawSplit();
+};
+$('milestones').onchange = () => {
+  const v = $('milestones').value;
+  if(v === 'custom'){
+    // start from the shortcut that was chosen, so the custom split is an edit of it
+    const from = TYPES[current].split_rows[lastShortcut] || [[30, 'advance'], [40, 'dev_complete'], [30, 'acceptance']];
+    useCustom(from);
+  } else {
+    lastShortcut = v;
+    showCustom();
+  }
+};
+
 // Switch the form to a contract type.
 function applyType(t, init, std){
   std = init ? ALL : (std || standardNow());
@@ -404,8 +483,11 @@ function applyType(t, init, std){
   // offer only the splits that fit this type, keeping the chosen one if it still fits
   const kept = $('milestones').value;
   $('milestones').innerHTML = T.splits
-    .map(n => '<option value="' + n + '">' + n.replace(/^\\w+\\//, '') + '</option>').join('');
-  $('milestones').value = (std.split || !T.splits.includes(kept)) ? T.split : kept;
+    .map(n => '<option value="' + n + '">' + n.replace(/^\\w+\\//, '') + '</option>').join('')
+    + '<option value="custom">Custom split\u2026</option>';
+  $('milestones').value = (std.split || (kept !== 'custom' && !T.splits.includes(kept))) ? T.split : kept;
+  if($('milestones').value !== 'custom') lastShortcut = $('milestones').value;
+  showCustom();
   if(std.platform) $('scope.platform').value = T.platform;
 }
 
@@ -495,9 +577,18 @@ async function send(f){
       v.value.forEach(r => addTask(r[0], r[1], r[2]));
       filled++; continue;
     }
+    if(k === 'custom_split'){
+      useCustom(v.value); markGuess('milestones', v.confidence !== 'high'); filled++; continue;
+    }
+    if(k === 'milestones' && v.value === 'custom') continue;          // custom_split fills it
     if(k === 'milestones' && !TYPES[current].splits.includes(v.value)){
-      extra.push('the payment split in the proposal (' + v.value.replace(/^\\w+\\//, '') + ') does not fit a '
-        + TYPES[current].name.toLowerCase() + ' timeline, so the standard split is kept - check it');
+      const rows = TYPES[current].split_rows[v.value];
+      if(rows){
+        useCustom(rows); markGuess('milestones', true); filled++;
+        extra.push('the proposal\u2019s payment split (' + v.value.replace(/^\\w+\\//, '') + ') is shown as a '
+          + 'custom split, because that shortcut does not fit a ' + TYPES[current].name.toLowerCase()
+          + ' timeline - check when each payment falls due');
+      }
       continue;
     }
     const el = $(k);
@@ -551,6 +642,14 @@ $('go').onclick = async () => {
                        ? 'Every ' + item + ' needs a name and a ' + desc + ', except a sub' + item
                        : 'Every ' + item + ' needs a name')
                      + ' - ' + half.length + (half.length === 1 ? ' row is' : ' rows are') + ' incomplete'], []);
+  }
+  if(data.milestones === 'custom'){
+    const total = splitTotal(), bad = [];
+    if(CUSTOM.length < LIMITS.min || CUSTOM.length > LIMITS.max)
+      bad.push('A custom split has ' + LIMITS.min + ' to ' + LIMITS.max + ' payments, not ' + CUSTOM.length);
+    if(total !== 100) bad.push('The payments add up to ' + total + '%, not 100%');
+    if(bad.length) return notBuilt(bad, ['milestones']);
+    data.custom_split = CUSTOM.map(r => [Number(r[0]), r[1]]);
   }
   data.online_store = $('online_store').checked;
   data['scope.store_products'] = $('scope.store_products').value.trim();
@@ -721,7 +820,7 @@ def friendly(err):
                 f"change the duration or the timeline rows" if m else err), ["timeline.duration"]
     if "timeline.duration" in err:
         return err[0].upper() + err[1:], ["timeline.duration"]
-    if "milestone" in err:
+    if "milestone" in err or "payment" in err:
         return err[0].upper() + err[1:], ["milestones"]
     return err[0].upper() + err[1:], []
 
@@ -776,7 +875,7 @@ def type_data(jur):
     """Everything the form switches when the contract type changes, read from presets/,
     for the types this country's template covers."""
     folder, out = jur.get("presets", ""), {}
-    splits = {**DEFAULT_SPLITS, **COUNTRY[jur["code"]]["splits_default"]}
+    split_defaults = {**DEFAULT_SPLITS, **COUNTRY[jur["code"]]["splits_default"]}
     for t in jur.get("types", builder.TYPES):
         label, item, desc, platform, platform_hint, project_hint = TYPE_WORDS[t]
         plan = preset_rows(presets("workplan", t, folder)[0])
@@ -791,8 +890,13 @@ def type_data(jur):
             "list": preset_rows(presets(builder.SCOPE_LIST[t], t, folder)[0]),
             "plan": plan,
             "duration": f"{NUM_WORDS.get(weeks, weeks)} weeks",
-            "split": splits[t],
+            "split": split_defaults[t],
             "splits": fitting,
+            # every shortcut as custom rows, so a custom split starts from the chosen one and a
+            # shortcut that does not fit this type can still be used, as a custom split
+            "split_rows": {n: splits.rows_from_preset(preset_rows(n))
+                           for n in presets("milestones", folder=folder)},
+            "triggers": splits.choices(t),
             "platform": platform, "platform_hint": platform_hint, "project_hint": project_hint,
             "list_label": label, "item": item, "desc": desc,
             "draft": t not in builder.reviewed(jur),
@@ -832,7 +936,9 @@ def render_page():
     return (PAGE
             .replace("__LOGO__", LOGO).replace("__FAVICON__", FAVICON).replace("__TAGLINE__", tagline)
             .replace("__COUNTRY_OPTIONS__", options)
-            .replace("__COUNTRIES__", json.dumps(country_data())))
+            .replace("__COUNTRIES__", json.dumps(country_data()))
+            .replace("__SPLIT_LIMITS__", json.dumps({"min": splits.MIN_PAYMENTS, "max": splits.MAX_PAYMENTS,
+                                                     "final": splits.MIN_FINAL})))
 
 
 # --------------------------------------------------------------------------- server
@@ -901,6 +1007,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, json.dumps({"errors": [
                 f"{COUNTRY[code]['adjective']} contracts cover "
                 f"{', '.join(TYPE_NAMES[t].lower() for t in jur['types'])} only so far"]}))
+        # a custom split is checked as a whole before anything else: the page blocks a
+        # total that is not 100%, and this catches whatever reaches here regardless
+        if d.get("milestones") == "custom":
+            bad = splits.problems(d.get("custom_split"), etype)
+            if bad:
+                return self._send(200, json.dumps({"errors": bad, "fields": ["milestones"]}))
         try:
             eng = {
                 "jurisdiction": code,
@@ -916,7 +1028,8 @@ class Handler(BaseHTTPRequestHandler):
                           "platform": d.get("scope.platform") or ("WordPress" if etype == "website" else "")},
                 "hosting": {"note": d.get("hosting.note", "")},
                 "fee": {"standard": num("fee.standard"), "discount": num("fee.discount")},
-                "milestones": f'preset:{d.get("milestones")}',
+                "milestones": (splits.milestones(code, etype, d.get("custom_split") or [])
+                               if d.get("milestones") == "custom" else f'preset:{d.get("milestones")}'),
                 "timeline": {"duration": d.get("timeline.duration", ""),
                              "tasks": d.get("tasks") or []},
                 "support": {"included": {"value": int(num("support.value", 60)),

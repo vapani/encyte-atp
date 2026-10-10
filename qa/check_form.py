@@ -79,6 +79,21 @@ def check_helpers():
     expect(len(msgs) == 2 and "curly braces" in msgs[0] and "placeholder" in msgs[1], "final-check messages read clearly")
 
 
+def check_custom_split_rules():
+    import splits
+    expect(not splits.problems([[20, "advance"], [40, "demo"], [40, "acceptance"]]), "a good custom split passes")
+    expect("add up to 90%" in " ".join(splits.problems([[20, "advance"], [40, "demo"], [30, "acceptance"]])),
+           "a custom split that does not add up is refused")
+    expect(any("project's order" in p for p in splits.problems([[20, "advance"], [30, "ready"], [10, "demo"], [40, "acceptance"]])),
+           "payments out of project order are refused")
+    expect(any("at least 10%" in p for p in splits.problems([[95, "advance"], [5, "acceptance"]])),
+           "a final payment under 10% is refused")
+    expect(any("2 to 5" in p for p in splits.problems([[50, "advance"]] + [[5, "dev_complete"]] * 4 + [[30, "acceptance"]])),
+           "more than five payments is refused")
+    rows, _ = splits.rows_from([20, 40, 40], ["at kick-off", "at demo", "at launch"])
+    expect(rows == [[20, "advance"], [40, "demo"], [40, "acceptance"]], "proposal wording maps to triggers")
+
+
 def check_splits():
     for code, c in serve.country_data().items():
         for t, T in c["types"].items():
@@ -132,6 +147,31 @@ def check_data_files(port):
     expect("not a proposal data file" in r.get("error", ""), "a .json that is not a data file is refused")
 
 
+def check_custom_requests(port):
+    custom = [[30, "advance"], [40, "ready"], [30, "acceptance"]]
+    body, _ = post(port, form_request("sample-example-co", milestones="custom", custom_split=custom))
+    text = contract_text(body) if body[:2] == b"PK" else ""
+    expect("40% when the website is ready for review." in text and "30% on acceptance." in text,
+           "a custom split builds, worded for the contract")
+    body, _ = post(port, form_request("sample-example-co", milestones="custom",
+                                      custom_split=[[30, "advance"], [40, "ready"], [20, "acceptance"]]))
+    expect(body[:1] == b"{" and "add up to 90%" in body.decode(), "a custom split that does not add up is refused")
+    body, _ = post(port, form_request("sample-lk-web-app", milestones="custom",
+                                      custom_split=[[20, "advance"], [40, "demo"], [40, "acceptance"]]))
+    expect(body[:2] == b"PK" and "upon the first working demo" in contract_text(body),
+           "a Sri Lankan custom split builds in the formal wording")
+
+    import proposal_data, tempfile as tf
+    d = json.load(open(f"{ROOT}/docs/examples/example-lk-web-app.json"))
+    d["payment_split"] = [{"percent": 20, "when": "kick-off"}, {"percent": 40, "when": "working demo"},
+                          {"percent": 40, "when": "acceptance"}]
+    with tf.NamedTemporaryFile("w", suffix=".json", delete=False) as fh:
+        json.dump(d, fh)
+    f = proposal_data.read(fh.name)["fields"]; os.unlink(fh.name)
+    expect(f["milestones"]["value"] == "custom" and f["custom_split"]["value"] == [[20, "advance"], [40, "demo"],
+           [40, "acceptance"]], "a data file split with triggers becomes a custom split")
+
+
 def check_requests(port):
     body, h = post(port, form_request("sample-example-co"))
     expect(body[:2] == b"PK" and "X-Record" not in h and "X-Draft" not in h,
@@ -156,6 +196,7 @@ def check_requests(port):
 
 def main():
     check_helpers()
+    check_custom_split_rules()
     check_splits()
     with socket.socket() as s:                              # a free port
         s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]
@@ -172,6 +213,7 @@ def main():
         check_page_script(port)
         check_requests(port)
         check_data_files(port)
+        check_custom_requests(port)
     finally:
         server.terminate(); server.wait(timeout=10)
     print(f"form: {'all checks pass' if not failures else f'{len(failures)} failed'}")
